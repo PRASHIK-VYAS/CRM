@@ -10,9 +10,19 @@ function authenticate(req, res, next) {
     const decoded = verifyToken(header.split(' ')[1]);
     req.user = decoded;
     next();
-  } catch {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid or expired token' + err });
   }
 }
+const isAdmin = (req, res, next) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "kon hai be tu?"
+    })
+  }
+  next();
 
-module.exports = authenticate;
+};
+
+
+module.exports = { authenticate, isAdmin };
