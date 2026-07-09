@@ -4,6 +4,7 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../..', '.env') });
 
 const sequelize = require('./config/db');
+require('./models/associations');
 const authRoutes = require('./routes/auth');
 
 const app = express();
