@@ -1,0 +1,111 @@
+# =========================
+# Dependencies
+# =========================
+node_modules/
+
+# Bun
+.bun/
+.bun-cache/
+bun.lockb
+
+# npm
+package-lock.json
+
+# =========================
+# Build Output
+# =========================
+dist/
+build/
+out/
+coverage/
+
+# Framework-specific
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+.vercel/
+.netlify/
+
+# =========================
+# Cache
+# =========================
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+vite.svg
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Keep example env files
+!.env.example
+
+# =========================
+# Runtime Files
+# =========================
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# =========================
+# Testing
+# =========================
+.nyc_output/
+coverage/
+
+# =========================
+# IDEs & Editors
+# =========================
+.vscode/
+.idea/
+*.iml
+
+# Vim
+*.swp
+*.swo
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# =========================
+# Temporary Files
+# =========================
+tmp/
+temp/
+*.tmp
+
+# =========================
+# Local Database
+# =========================
+*.sqlite
+*.sqlite3
+
+# =========================
+# Misc
+# =========================
+*.tgz

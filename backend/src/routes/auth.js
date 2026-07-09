@@ -8,6 +8,9 @@ const { authenticate, isAdmin } = require('../middleware/auth')
 
 const router = Router();
 
+router.get('/', (_req, res) => res.json({ message: 'CRM API is running' }));
+router.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -87,6 +90,6 @@ router.post('/create_user', authenticate, isAdmin, async (req, res) => {
     });
   }
 
-}
+
 });
 module.exports = router;
