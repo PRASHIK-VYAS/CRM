@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
+const ROLES = require('./enums/Role')
 
 const User = sequelize.define('User', {
   id: {
@@ -19,6 +20,11 @@ const User = sequelize.define('User', {
   password: {
     type: DataTypes.STRING,
     allowNull: false,
+  },
+  role : {
+    type: DataTypes.ENUM(...Object.values(ROLES)),
+    allowNull: false,
+    defaultValue: ROLES.COORDINATOR
   },
   resetToken: {
     type: DataTypes.STRING,
