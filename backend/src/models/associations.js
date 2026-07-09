@@ -1,5 +1,5 @@
-const Company360 = require("./company360.model");
-const MoU = require("./mou.model");
+const Company360 = require("./Company360");
+const MoU = require("./MoU");
 
 Company360.hasMany(MoU, {
   foreignKey: "companyId",
@@ -10,3 +10,5 @@ MoU.belongsTo(Company360, {
   foreignKey: "companyId",
   as: "company",
 });
+
+module.exports = { Company360, MoU };
