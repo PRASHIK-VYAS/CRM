@@ -81,12 +81,12 @@
     
     8. Phase Themes
     
-    | Phase   | Days   | Theme / Focus                                                                 |
-    |---------|--------|-------------------------------------------------------------------------------|
-    | Phase 1 | 1-25   | Foundation: DB Schema, Auth, and Core Entity Profiles.                        |
-    | Phase 2 | 26-50  | Transactional Flow: Job $\rightarrow$ Application $\rightarrow$ Offer Engine. |
-    | Phase 3 | 51-75  | Strategic Layer: Alumni Map, Outreach Engine, and MoU Vault.                  |
-    | Phase 4 | 76-100 | Hardening: Health Score, UAT, Bug-fixing, and Production Launch.              |
+    | Phase       |    Working Days | Date Range                                | Focus                                                           |
+    | ----------- | --------------: | ----------------------------------------- | --------------------------------------------------------------- |
+    | **Phase 1** |   Days **1-25** | **7 Jul 2026 (Tue) → 10 Aug 2026 (Mon)**  | Foundation: DB Schema, Auth, and Core Entity Profiles           |
+    | **Phase 2** |  Days **26-50** | **11 Aug 2026 (Tue) → 14 Sep 2026 (Mon)** | Transactional Flow: Job → Application → Offer Engine            |
+    | **Phase 3** |  Days **51-75** | **15 Sep 2026 (Tue) → 19 Oct 2026 (Mon)** | Strategic Layer: Alumni Map, Outreach Engine, and MoU Vault     |
+    | **Phase 4** | Days **76-100** | **20 Oct 2026 (Tue) → 23 Nov 2026 (Mon)** | Hardening: Health Score, UAT, Bug Fixing, and Production Launch |
     
     
     
