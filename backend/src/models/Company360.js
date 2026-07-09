@@ -4,16 +4,17 @@ const sequelize = require("../config/db");
 const Company360 = sequelize.define(
   "Company360",
   {
+
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
     },
 
-    companyCode: {
-      type: DataTypes.STRING(20),
-      allowNull: false,
-      unique: true,
+    companyCode : {
+      type : DataTypes.STRING(20),
+      allowNull : false,
+      unique : true,
     },
 
     companyName:{
