@@ -1,7 +1,7 @@
 // models/alumni.model.js
 
 const { DataTypes } = require("sequelize");
-const sequelize = require("../config/database");
+const sequelize = require("../config/db");
 
 const Alumni = sequelize.define(
   "Alumni",
