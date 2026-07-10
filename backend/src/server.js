@@ -5,7 +5,9 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
 const sequelize = require('./config/db');
 require('./models/associations');
+
 const authRoutes = require('./routes/auth');
+const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,6 +18,8 @@ app.use(express.json());
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.use('/auth', authRoutes);
+app.use('/analytics', analyticsRoutes);
+app.use('/analytics', analyticsRoutes);
 
 app.listen(PORT, async () => {
   try {
