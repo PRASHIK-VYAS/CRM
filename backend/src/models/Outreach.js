@@ -70,7 +70,7 @@ const Outreach = sequelize.define(
             type : DataTypes.DATE,
         },
         notes : {
-            type : DataTypes.DATE,
+            type : DataTypes.TEXT,
         },
         createdBy : {
             type : DataTypes.UUID,

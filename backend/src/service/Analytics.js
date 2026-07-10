@@ -1,5 +1,5 @@
-const { sequelize } = require("../config/database");
-const { Company360, MoU, Outreach } = require("../models");
+const { sequelize } = require("../config/db");
+const { Company360, MoU, Outreach } = require("../models/");
 const { fn, col } = require("sequelize");
 
 class AnalyticsService {
