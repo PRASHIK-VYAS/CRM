@@ -1,6 +1,6 @@
 
 const { DataTypes } = require("sequelize");
-const sequelize = require("../config/database");
+const sequelize = require("../config/db");
 
 const DealPipeline = sequelize.define(
   "DealPipeline",
@@ -28,8 +28,14 @@ const DealPipeline = sequelize.define(
     },
 
     ownerId: {
-      type: DataTypes.UUID,
+      type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: "Users",
+        key: "id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "RESTRICT",
     },
 
     stage: {

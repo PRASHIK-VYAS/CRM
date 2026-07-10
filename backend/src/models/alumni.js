@@ -1,7 +1,7 @@
 // models/alumni.model.js
 
 const { DataTypes } = require("sequelize");
-const sequelize = require("../config/database");
+const sequelize = require("../config/db");
 
 const Alumni = sequelize.define(
   "Alumni",
@@ -78,6 +78,8 @@ const Alumni = sequelize.define(
         model: "company360",
         key: "id",
       },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
     },
 
     linkedin: {
@@ -142,6 +144,7 @@ const Alumni = sequelize.define(
   {
     tableName: "alumni",
     timestamps: true,
+    indexes: [{ fields: ["companyId"] }],
   }
 );
 
