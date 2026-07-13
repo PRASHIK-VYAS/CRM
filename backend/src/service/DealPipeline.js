@@ -69,3 +69,18 @@ const sourceMap = {
     Other : "Other",
 };
 
+const stageLabels = Object.fromEntries(
+    Object.entries(stageMap).map(([label, value]) => [value, label]),
+);
+
+const sourceLabels = Object.fromEntries(
+    Object.entries(sourceMap).map(([label, value]) => [value, label]),
+);
+
+function normalizeEnum(value, mapping){
+    if(!value){
+        return value;
+    }
+    return mapping[value] ?? value;
+}
+
