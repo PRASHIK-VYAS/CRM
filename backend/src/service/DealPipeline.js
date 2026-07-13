@@ -57,3 +57,15 @@ const stageMap = {
     Lost : "Lost",
 };
 
+const sourceMap = {
+    "Cold Email" : "Cold_Email",
+    Referral : "Referral",
+    Alumni : "Alumni",
+    Website : "Website",
+    LinkedIn : "LinkedIn",
+    "Campus Drive" : "Campus_Drive",
+    "Previous Partner" : "Previous_Partner",
+    Conference : "Conference",
+    Other : "Other",
+};
+
