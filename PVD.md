@@ -51,7 +51,7 @@
     
     
     6. Tech Stack (Technical Requirements)
-    - Frontend: React.js + Tailwind CSS (Responsive Web Application).
+    - Frontend: Next.js + Tailwind CSS (Responsive Web Application).
     - Backend: Node.js + Express.js (Modular REST API).
     - Database: MySQL (Relational mapping for strict data integrity).
     - Authentication: JWT (JSON Web Tokens) with Role-Based Access Control (RBAC).
@@ -117,7 +117,7 @@
     
     
     
-    12. Open Questions
+    <!-- 12. Open Questions
     - Data Migration: What is the exact format of the existing Excel sheets to ensure a 100% clean import?
     - Email Limits: Will the college provide an SMTP server, or should we use a third-party service like SendGrid?
-    - Alumni Sourcing: How will we initially populate the Alumni database? (Manual upload vs. LinkedIn scraping).
+    - Alumni Sourcing: How will we initially populate the Alumni database? (Manual upload vs. LinkedIn scraping). -->
