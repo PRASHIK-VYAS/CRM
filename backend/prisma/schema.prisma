@@ -14,11 +14,11 @@ model User {
   password         String         @db.VarChar(255)
   resetToken       String?        @db.VarChar(255)
   resetTokenExpiry DateTime?      @db.Timestamptz(6)
-  otp              String?        @db.VarChar(255)
-  otpExpiry        DateTime?      @db.Timestamptz(6)
   createdAt        DateTime       @db.Timestamptz(6)
   updatedAt        DateTime       @db.Timestamptz(6)
   role             UserRole       @default(coordinator)
+  otp              String?        @db.VarChar(255)
+  otpExpiry        DateTime?      @db.Timestamptz(6)
   deals            DealPipeline[]
 
   @@map("Users")
