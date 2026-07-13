@@ -88,6 +88,6 @@ function pickDealData(data){
     return Object.fromEntries(
         writeableFields
             .filter((field) => data[field] !== undefined)
-            .map((field) =. [field, data[field]]),
+            .map((field) => [field, data[field]]),
     );
 }
