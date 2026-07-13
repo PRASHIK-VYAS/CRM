@@ -1,0 +1,412 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               Int            @id @default(autoincrement())
+  name             String         @db.VarChar(255)
+  email            String         @unique @db.VarChar(255)
+  password         String         @db.VarChar(255)
+  resetToken       String?        @db.VarChar(255)
+  resetTokenExpiry DateTime?      @db.Timestamptz(6)
+  otp              String?        @db.VarChar(255)
+  otpExpiry        DateTime?      @db.Timestamptz(6)
+  createdAt        DateTime       @db.Timestamptz(6)
+  updatedAt        DateTime       @db.Timestamptz(6)
+  role             UserRole       @default(coordinator)
+  deals            DealPipeline[]
+
+  @@map("Users")
+}
+
+model Alumni {
+  id                 String                  @id @db.Uuid
+  alumniCode         String                  @unique @db.VarChar(20)
+  fullName           String                  @db.VarChar(255)
+  email              String                  @unique @db.VarChar(255)
+  phone              String?                 @db.VarChar(20)
+  department         String                  @db.VarChar(100)
+  batchYear          Int
+  currentDesignation String                  @db.VarChar(150)
+  seniorityLevel     AlumniSeniorityLevel    @default(Entry_Level)
+  companyId          String?                 @db.Uuid
+  linkedin           String?                 @db.VarChar(255)
+  location           String?                 @db.VarChar(255)
+  skills             Json?                   @default("[]") @db.Json
+  willingnessToHelp  AlumniWillingnessToHelp @default(Maybe)
+  helpTypes          Json?                   @default("[]") @db.Json
+  influenceScore     Int                     @default(0)
+  relationshipScore  Int                     @default(0)
+  lastContactedAt    DateTime?               @db.Timestamptz(6)
+  status             AlumniStatus            @default(Active)
+  notes              String?
+  createdAt          DateTime                @db.Timestamptz(6)
+  updatedAt          DateTime                @db.Timestamptz(6)
+  company            Company360?             @relation(fields: [companyId], references: [id])
+
+  @@index([companyId], map: "alumni_company_id")
+  @@map("alumni")
+}
+
+model Company360 {
+  id                String            @id @db.Uuid
+  companyCode       String            @unique @db.VarChar(20)
+  companyName       String            @unique @db.VarChar(255)
+  industry          CompanyIndustry
+  website           String?           @db.VarChar(255)
+  email             String?           @db.VarChar(255)
+  phone             String?           @db.VarChar(20)
+  linkedin          String?           @db.VarChar(255)
+  headOffice        String?           @db.VarChar(255)
+  city              String?           @db.VarChar(255)
+  country           String?           @default("India") @db.VarChar(255)
+  postalCode        String?           @db.VarChar(15)
+  companySize       CompanySize?
+  foundedYear       Int?
+  description       String?
+  status            CompanyStatus     @default(PROSPECT)
+  partnershipLevel  PartnershipLevel  @default(NONE)
+  relationshipStage RelationshipStage @default(Cold_Lead)
+  healthScore       Int               @default(0)
+  nextFollowUpDate  DateTime?         @db.Timestamptz(6)
+  totalPlacements   Int               @default(0)
+  totalOffers       Int               @default(0)
+  totalVisits       Int               @default(0)
+  totalMoUs         Int               @default(0)
+  createdBy         String?           @db.Uuid
+  updatedBy         String?           @db.Uuid
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @db.Timestamptz(6)
+  updatedAt         DateTime          @db.Timestamptz(6)
+  deletedAt         DateTime?         @db.Timestamptz(6)
+  alumni            Alumni[]
+  deals             DealPipeline[]
+  mous              MoU[]
+  outreaches        Outreach[]
+
+  @@index([city], map: "company360_city")
+  @@index([healthScore], map: "company360_health_score")
+  @@index([industry], map: "company360_industry")
+  @@index([nextFollowUpDate], map: "company360_next_follow_up_date")
+  @@index([partnershipLevel], map: "company360_partnership_level")
+  @@index([relationshipStage], map: "company360_relationship_stage")
+  @@index([status], map: "company360_status")
+  @@map("company360")
+}
+
+model DealPipeline {
+  id                 String        @id @db.Uuid
+  dealCode           String        @unique @db.VarChar(20)
+  companyId          String        @db.Uuid
+  title              String        @db.VarChar(255)
+  ownerId            Int
+  stage              DealStage     @default(Cold_Lead)
+  priority           DealPriority  @default(Medium)
+  probability        Int           @default(10)
+  expectedStudents   Int?          @default(0)
+  expectedCTC        Decimal?      @db.Decimal(10, 2)
+  expectedHiringDate DateTime?     @db.Date
+  source             DealSource    @default(Other)
+  leadOwner          String?       @db.VarChar(255)
+  decisionMaker      String?       @db.VarChar(255)
+  decisionMakerEmail String?       @db.VarChar(255)
+  decisionMakerPhone String?       @db.VarChar(255)
+  lastActivityDate   DateTime?     @db.Timestamptz(6)
+  nextFollowUpDate   DateTime?     @db.Timestamptz(6)
+  nextAction         String?       @db.VarChar(255)
+  meetingDate        DateTime?     @db.Timestamptz(6)
+  proposalSentDate   DateTime?     @db.Timestamptz(6)
+  mouExpectedDate    DateTime?     @db.Timestamptz(6)
+  closeDate          DateTime?     @db.Timestamptz(6)
+  lostReason         String?
+  competitorCollege  String?       @db.VarChar(255)
+  riskLevel          DealRiskLevel @default(Low)
+  remarks            String?
+  isArchived         Boolean?      @default(false)
+  createdBy          String?       @db.Uuid
+  updatedBy          String?       @db.Uuid
+  createdAt          DateTime      @db.Timestamptz(6)
+  updatedAt          DateTime      @db.Timestamptz(6)
+  deletedAt          DateTime?     @db.Timestamptz(6)
+  company            Company360    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  owner              User          @relation(fields: [ownerId], references: [id])
+
+  @@index([companyId], map: "deal_pipeline_company_id")
+  @@index([expectedHiringDate], map: "deal_pipeline_expected_hiring_date")
+  @@index([nextFollowUpDate], map: "deal_pipeline_next_follow_up_date")
+  @@index([ownerId], map: "deal_pipeline_owner_id")
+  @@index([priority], map: "deal_pipeline_priority")
+  @@index([probability], map: "deal_pipeline_probability")
+  @@index([stage], map: "deal_pipeline_stage")
+  @@map("deal_pipeline")
+}
+
+model MoU {
+  id                  String            @id @db.Uuid
+  companyId           String            @db.Uuid
+  mouNumber           String            @unique @db.VarChar(50)
+  title               String            @db.VarChar(255)
+  purpose             String?
+  startDate           DateTime          @db.Date
+  endDate             DateTime          @db.Date
+  signedDate          DateTime          @db.Date
+  status              MoUStatus         @default(DRAFT)
+  collaborationType   CollaborationType
+  signedByCompany     String?           @db.VarChar(255)
+  signedByInstitute   String?           @db.VarChar(255)
+  renewalReminderDays Int?              @default(30)
+  documentUrl         String?           @db.VarChar(255)
+  remarks             String?
+  createdBy           String?           @db.Uuid
+  updatedBy           String?           @db.Uuid
+  isActive            Boolean?          @default(true)
+  createdAt           DateTime          @db.Timestamptz(6)
+  updatedAt           DateTime          @db.Timestamptz(6)
+  deletedAt           DateTime?         @db.Timestamptz(6)
+  company             Company360        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([collaborationType], map: "mous_collaboration_type")
+  @@index([companyId], map: "mous_company_id")
+  @@index([endDate], map: "mous_end_date")
+  @@index([status], map: "mous_status")
+  @@map("mous")
+}
+
+model Outreach {
+  id               String           @id @db.Uuid
+  companyId        String           @db.Uuid
+  outreachType     OutreachType
+  subject          String           @db.VarChar(255)
+  description      String?
+  interactionDate  DateTime         @db.Timestamptz(6)
+  outcome          OutreachOutcome? @default(NEUTRAL)
+  status           OutreachStatus?  @default(PLANNED)
+  nextFollowUpDate DateTime?        @db.Timestamptz(6)
+  notes            DateTime?        @db.Timestamptz(6)
+  createdBy        String           @db.Uuid
+  updatedBy        String?          @db.Uuid
+  isActive         Boolean?         @default(true)
+  createdAt        DateTime         @db.Timestamptz(6)
+  updatedAt        DateTime         @db.Timestamptz(6)
+  deletedAt        DateTime?        @db.Timestamptz(6)
+  company          Company360       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId], map: "outreaches_company_id")
+  @@index([interactionDate], map: "outreaches_interaction_date")
+  @@index([nextFollowUpDate], map: "outreaches_next_follow_up_date")
+  @@index([outcome], map: "outreaches_outcome")
+  @@index([status], map: "outreaches_status")
+  @@map("outreaches")
+}
+
+enum UserRole {
+  admin
+  tpo
+  coordinator
+  hod
+
+  @@map("enum_Users_role")
+}
+
+enum AlumniSeniorityLevel {
+  Entry_Level  @map("Entry Level")
+  Mid_Level    @map("Mid Level")
+  Senior_Level @map("Senior Level")
+  Lead
+  Manager
+  Director
+  Founder
+  HR
+  Other
+
+  @@map("enum_alumni_seniorityLevel")
+}
+
+enum AlumniStatus {
+  Active
+  Inactive
+  Not_Reachable @map("Not Reachable")
+
+  @@map("enum_alumni_status")
+}
+
+enum AlumniWillingnessToHelp {
+  Yes
+  No
+  Maybe
+
+  @@map("enum_alumni_willingnessToHelp")
+}
+
+enum CompanySize {
+  SIZE_1_50      @map("1-50")
+  SIZE_51_200    @map("51-200")
+  SIZE_201_500   @map("201-500")
+  SIZE_501_1000  @map("501-1000")
+  SIZE_1000_PLUS @map("1000+")
+
+  @@map("enum_company360_companySize")
+}
+
+enum CompanyIndustry {
+  IT
+  Finance
+  Healthcare
+  Manufacturing
+  Education
+  Consulting
+  Telecommunication
+  E_Commerce        @map("E-Commerce")
+  Automobile
+  Construction
+  Other
+
+  @@map("enum_company360_industry")
+}
+
+enum PartnershipLevel {
+  NONE
+  BASIC
+  PREMIUM
+  STRATEGIC
+
+  @@map("enum_company360_partnershipLevel")
+}
+
+enum RelationshipStage {
+  Cold_Lead         @map("Cold Lead")
+  Contacted
+  Interested
+  Meeting_Scheduled @map("Meeting Scheduled")
+  Proposal_Sent     @map("Proposal Sent")
+  Negotiation
+  MoU_Signed        @map("MoU Signed")
+  Hiring
+  Strategic_Partner @map("Strategic Partner")
+  Inactive
+
+  @@map("enum_company360_relationshipStage")
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+  BLACKLISTED
+
+  @@map("enum_company360_status")
+}
+
+enum DealPriority {
+  Low
+  Medium
+  High
+  Critical
+
+  @@map("enum_deal_pipeline_priority")
+}
+
+enum DealRiskLevel {
+  Low
+  Medium
+  High
+
+  @@map("enum_deal_pipeline_riskLevel")
+}
+
+enum DealSource {
+  Cold_Email       @map("Cold Email")
+  Referral
+  Alumni
+  Website
+  LinkedIn
+  Campus_Drive     @map("Campus Drive")
+  Previous_Partner @map("Previous Partner")
+  Conference
+  Other
+
+  @@map("enum_deal_pipeline_source")
+}
+
+enum DealStage {
+  Cold_Lead         @map("Cold Lead")
+  Contacted
+  Meeting_Scheduled @map("Meeting Scheduled")
+  Meeting_Completed @map("Meeting Completed")
+  Interested
+  Proposal_Sent     @map("Proposal Sent")
+  Negotiation
+  MoU_Discussion    @map("MoU Discussion")
+  MoU_Signed        @map("MoU Signed")
+  Hiring_Started    @map("Hiring Started")
+  Strategic_Partner @map("Strategic Partner")
+  On_Hold           @map("On Hold")
+  Lost
+
+  @@map("enum_deal_pipeline_stage")
+}
+
+enum CollaborationType {
+  PLACEMENTS
+  INTERNSHIPS
+  TRAINING
+  RESEARCH
+  CONSULTANCY
+  INDUSTRY_VISIT
+  WORKSHOP
+  MULTIPLE
+  OTHER
+
+  @@map("enum_mous_collaborationType")
+}
+
+enum MoUStatus {
+  DRAFT
+  PENDING
+  ACTIVE
+  EXPIRED
+  TERMINATED
+  RENEWED
+
+  @@map("enum_mous_status")
+}
+
+enum OutreachOutcome {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  NO_RESPONSE
+  FOLLOW_UP_REQUIRED
+
+  @@map("enum_outreaches_outcome")
+}
+
+enum OutreachType {
+  EMAIL
+  PHONE_CALL
+  MEETING
+  LINKEDIN
+  VISIT
+  EVENT
+  PLACEMENT_DRIVE
+  INTERNSHIP
+  MOU_DISCUSSION
+  FOLLOW_UP
+  OTHER
+
+  @@map("enum_outreaches_outreachType")
+}
+
+enum OutreachStatus {
+  PLANNED
+  COMPLETED
+  CANCELLED
+  MISSED
+
+  @@map("enum_outreaches_status")
+}

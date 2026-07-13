@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-async function sendOtpEmail(to, otp) {
+export async function sendOtpEmail(to, otp) {
     await transporter.sendMail({
         from : `"CRM" <${process.env.SMTP_USER}>`,
         to,
@@ -21,6 +21,4 @@ async function sendOtpEmail(to, otp) {
     });
     
 }
-
-module.exports = {sendOtpEmail};
 

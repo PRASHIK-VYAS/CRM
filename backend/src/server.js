@@ -1,32 +1,37 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
-
-const sequelize = require('./config/db');
-require('./models/associations');
-
-const authRoutes = require('./routes/auth');
-const analyticsRoutes = require('./routes/analytics');
+import express from "express";
+import cors from "cors";
+import prisma from "./config/prisma.js";
+import authRoutes from "./routes/auth.js";
+import analyticsRoutes from "./routes/analytics.js";
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const port = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
 
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.use("/auth", authRoutes);
+app.use("/analytics", analyticsRoutes);
 
-app.use('/auth', authRoutes);
-app.use('/analytics', analyticsRoutes);
-app.use('/analytics', analyticsRoutes);
+async function shutdown(signal) {
+  console.log(`${signal} received; closing database connections`);
+  await prisma.$disconnect();
+  process.exit(0);
+}
 
-app.listen(PORT, async () => {
-  try {
-    await sequelize.authenticate();
-    await sequelize.sync();
-    console.log(`Server running on port ${PORT} — DB connected`);
-  } catch (err) {
-    console.error('DB connection failed:', err.message);
-  }
-});
+process.once("SIGINT", () => shutdown("SIGINT"));
+process.once("SIGTERM", () => shutdown("SIGTERM"));
+
+try {
+  await prisma.$connect();
+  app.listen(port, () => {
+    console.log(`Server running on port ${port} — DB connected with Prisma`);
+  });
+} catch (error) {
+  console.error("DB connection failed:", error);
+  await prisma.$disconnect();
+  process.exit(1);
+}
+
+export default app;

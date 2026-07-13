@@ -5,4 +5,4 @@ const Roles = Object.freeze({
     HOD : 'hod'
 });
 
-module.exports = Roles;
+export default Roles;

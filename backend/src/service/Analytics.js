@@ -1,9 +1,12 @@
-const { sequelize } = require("../config/db");
-const { Company360, MoU, Outreach } = require("../models/");
-const { fn, col } = require("sequelize");
+import prisma from "../config/prisma.js";
+
+const industryLabels = {
+  E_Commerce: "E-Commerce",
+};
 
 class AnalyticsService {
   async getDashboardAnalytics() {
+    const activeRecord = { deletedAt: null };
     const [
       totalCompanies,
       activeCompanies,
@@ -12,55 +15,30 @@ class AnalyticsService {
       totalMoUs,
       activeMoUs,
       totalOutreach,
-      avgHealthScore,
+      healthScore,
       companiesByIndustry,
       companiesByStatus,
     ] = await Promise.all([
-      Company360.count(),
-
-      Company360.count({
-        where: { status: "ACTIVE" },
+      prisma.company360.count({ where: activeRecord }),
+      prisma.company360.count({ where: { ...activeRecord, status: "ACTIVE" } }),
+      prisma.company360.count({ where: { ...activeRecord, status: "PROSPECT" } }),
+      prisma.company360.count({ where: { ...activeRecord, status: "INACTIVE" } }),
+      prisma.moU.count({ where: activeRecord }),
+      prisma.moU.count({ where: { ...activeRecord, status: "ACTIVE" } }),
+      prisma.outreach.count({ where: activeRecord }),
+      prisma.company360.aggregate({
+        where: activeRecord,
+        _avg: { healthScore: true },
       }),
-
-      Company360.count({
-        where: { status: "PROSPECT" },
+      prisma.company360.groupBy({
+        by: ["industry"],
+        where: activeRecord,
+        _count: { id: true },
       }),
-
-      Company360.count({
-        where: { status: "INACTIVE" },
-      }),
-
-      MoU.count(),
-
-      MoU.count({
-        where: { status: "ACTIVE" },
-      }),
-
-      Outreach.count(),
-
-      Company360.findOne({
-        attributes: [
-          [fn("AVG", col("healthScore")), "averageHealthScore"],
-        ],
-        raw: true,
-      }),
-
-      Company360.findAll({
-        attributes: [
-          "industry",
-          [fn("COUNT", col("id")), "count"],
-        ],
-        group: ["industry"],
-        raw: true,
-      }),
-
-      Company360.findAll({
-        attributes: [
-          "status",
-          [fn("COUNT", col("id")), "count"],
-        ],
-        group: ["status"],
-        raw: true,
+      prisma.company360.groupBy({
+        by: ["status"],
+        where: activeRecord,
+        _count: { id: true },
       }),
     ]);
 
@@ -70,23 +48,20 @@ class AnalyticsService {
         active: activeCompanies,
         prospect: prospectCompanies,
         inactive: inactiveCompanies,
-        averageHealthScore: Number(
-          avgHealthScore.averageHealthScore || 0
-        ).toFixed(2),
-        byIndustry: companiesByIndustry,
-        byStatus: companiesByStatus,
+        averageHealthScore: Number(healthScore._avg.healthScore ?? 0).toFixed(2),
+        byIndustry: companiesByIndustry.map(({ industry, _count }) => ({
+          industry: industryLabels[industry] ?? industry,
+          count: _count.id,
+        })),
+        byStatus: companiesByStatus.map(({ status, _count }) => ({
+          status,
+          count: _count.id,
+        })),
       },
-
-      mou: {
-        total: totalMoUs,
-        active: activeMoUs,
-      },
-
-      outreach: {
-        total: totalOutreach,
-      },
+      mou: { total: totalMoUs, active: activeMoUs },
+      outreach: { total: totalOutreach },
     };
   }
 }
 
-module.exports = new AnalyticsService();
+export default new AnalyticsService();

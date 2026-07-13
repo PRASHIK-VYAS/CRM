@@ -1,14 +1,2 @@
-const { Sequelize } = require('sequelize');
-
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
-  dialect: 'postgres',
-  dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false,
-    },
-  },
-  logging: false,
-});
-
-module.exports = sequelize;
+// Backward-compatible import path. New code should import `./prisma.js` directly.
+export { default } from "./prisma.js";
