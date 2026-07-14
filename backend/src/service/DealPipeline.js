@@ -422,4 +422,36 @@ class DealPipelineService {
             },
         };
     }
+
+    async getDealById(
+        id,
+        { includeDeleted = false } = {},
+    ) {
+        const deal = await prisma.dealPipeline.findFirst({
+        where: {
+            id,
+            ...(includeDeleted ? {} : { deletedAt: null }),
+        },
+        include: {
+            company: {
+            select: {
+                id: true,
+                companyCode: true,
+                companyName: true,
+                status: true,
+                relationshipStage: true,
+                healthScore: true,
+                },
+                },
+                owner: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    },
+                },
+            },
+        });
+    }
 }
