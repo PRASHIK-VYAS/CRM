@@ -224,7 +224,7 @@ class DealPipelineService {
                 },
                 owner : {
                     select : {
-                        id: true,
+                        id: true, 
                         name : true,
                         email: true,
                         role: true,
@@ -234,4 +234,23 @@ class DealPipelineService {
         });
         return serializeDeal(deal);
     }
+    async getDefaultSettings({
+        page = 1,
+        limit = 20,
+        search,
+        companyId,
+        ownerId,
+        stage,
+        priority,
+        source,
+        riskLevel,
+        minimumProbability,
+        maximumProbability,
+        followUpFrom,
+        followUpTo,
+        includeArchived = false,
+        includeDeleted = false,
+        sortBy = "createdAt",
+        sortOrder = "desc",
+    } = {})
 }
