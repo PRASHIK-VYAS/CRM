@@ -269,5 +269,21 @@ class DealPipelineService {
             "createdAt",
             "updatedAt",
         ]);
+        const orderField = allowedSortFields.has(sortBy)
+            ? sortBy
+            : "createdAt";
+        const conditions = [];
+
+        if(!includeDeleted){
+            conditions.push({deletedAt : null});
+        }
+        if(!includeArchived){
+            conditions.push({
+                OR: [
+                    { isArchived : false},
+                    { isArchived: null},
+                ],
+            });
+        }
     }
 }
