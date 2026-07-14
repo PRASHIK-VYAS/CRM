@@ -292,10 +292,32 @@ class DealPipelineService {
             conditions.push({ ownerId: Number(ownerId)});
         }
         if(stage){
-            conditions.push([
+            conditions.push({
                 stage: normalizeEnum(stage, stageMap),
-            ]);
+            });
         }
-        
+        if (priority){
+            conditions.push({ priority });
+        }
+        if(source){
+            conditions.push({
+                source: normalizeEnum(source, sourceMap),
+            });
+        }
+        if(riskLevel){
+            conditions.push({ riskLevel });
+        }
+        if(
+            minimumProbability !== undefined || 
+            maximumProbability !== undefined
+        ) {
+            conditions.push({
+                probability: {
+                    ...(minimumProbability !== undefined && {
+                        gte: Number(minimumProbability),
+                    }),
+                },
+            });
+        }
     }
 }
