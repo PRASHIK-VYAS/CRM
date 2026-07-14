@@ -252,5 +252,11 @@ class DealPipelineService {
         includeDeleted = false,
         sortBy = "createdAt",
         sortOrder = "desc",
-    } = {})
+    } = {}) {
+        const parsedPage = Math.max(Number(page) || 1, 1);
+        const parsedLimit = Math.min(
+            Math.max(Number(limit) || 20, 1),
+            100,
+        );
+    }
 }
