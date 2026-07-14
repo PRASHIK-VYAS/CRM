@@ -489,4 +489,47 @@ class DealPipelineService {
         });
         return deals.map(serializeDeal);
     }
+    async getDealByOwner(ownerId){
+        const owner = await prisma.user.findUnique({
+            where : {
+                id: Number(ownerId),
+            },
+            select : {id : true},
+        });
+        if(!owner){
+            throw new Error("deal owner not found");
+        }
+        const deals = await prisma.dealPipeline.findMany({
+            where :{
+                ownerId: Number(ownerId),
+                deletedAt: null,
+                OR: [
+                    { isArchived: false},
+                    { isArchived: null},
+                ],
+            },
+            orderBy: [
+                {
+                    nextFollowUpDate: {
+                        sort : "asc",
+                        nulls : "last",
+                    },
+                },
+                {
+                    updatedAt: "desc",
+                },
+            ],
+            include : {
+                company: {
+                    select : {
+                        id: true,
+                        companyCode: true,
+                        companyName: true,
+                    },
+                },
+            },
+        });
+        return deals.map(serializeDeal);
+    }
+    
 }
