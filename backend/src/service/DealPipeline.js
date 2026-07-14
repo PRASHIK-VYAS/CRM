@@ -531,5 +531,35 @@ class DealPipelineService {
         });
         return deals.map(serializeDeal);
     }
-    
+    async updateDeal(id, data, updatedBy = null){
+        await this.getDealById(id);
+        const dealData = normalizeDealData(data);
+        if(dealData.companyId){
+            const company = await prisma.company360.findFirst({
+                where : {
+                    id: dealData.companyId,
+                    deletedAt: null,
+                },
+                select : { id: true},
+            });
+            if(!company){
+                throw new Error("company not found");
+            }
+        }
+        if(dealData.ownerId){
+            dealData.ownerId = Number(dealData.ownerId);
+            const owner = await prisma.user.findUnique({
+                where : {
+                    id: dealData.ownerId,
+                },
+                select : { id: true},
+            });
+            if(!owner){
+                throw new Error("deal owner not found");
+            }
+        }
+        const deal = await prisma.dealPipeline.update({
+            // code remain
+        })
+    }
 }
