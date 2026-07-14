@@ -411,5 +411,15 @@ class DealPipelineService {
             }),
             prisma.dealPipeline.count({ where }),
         ]);
+
+        return {
+            data: deals.map(serializeDeal),
+            pagination: {
+                page: parsedPage,
+                limit: parsedLimit,
+                total,
+                totalPages: Math.ceil(total / parsedLimit),
+            },
+        };
     }
 }
