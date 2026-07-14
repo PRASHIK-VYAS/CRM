@@ -285,5 +285,17 @@ class DealPipelineService {
                 ],
             });
         }
+        if(companyId){
+            conditions.push({ companyId });
+        }
+        if(ownerId){
+            conditions.push({ ownerId: Number(ownerId)});
+        }
+        if(stage){
+            conditions.push([
+                stage: normalizeEnum(stage, stageMap),
+            ]);
+        }
+        
     }
 }
