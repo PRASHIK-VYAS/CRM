@@ -91,3 +91,108 @@ function pickDealData(data){
             .map((field) => [field, data[field]]),
     );
 }
+
+function normalizeDealData(data){
+    const deal = pinkDealData(data);
+
+    if(deal.dealCode){
+        deal.dealCode = deal.dealCode.trim().toUpperCase();
+    }
+    if(deal.title){
+        deal.title = deal.title.trim();
+    }
+    if(deal.decisionMakerEmail){
+        deal.decisionMakerEmail = deal.decisionMakerEmail
+        .trim
+        .toLowerCase();
+    }
+    if(deal.stage){
+        deal.stage = normalizeEnum(deal.stage, stageMap);
+    }
+    if(deal.source){
+        if(deal[field]){
+            deal[field] = new Date(deal[field]);
+        }
+    }
+    if(
+        deal.probability != undefined && 
+        (Number(deal.probability) < 0 || 
+         Number(deal.probability) > 100)
+    ) {
+        throw new Error(
+            "Deal probability must be between 0 and 100",
+        );
+    }
+    if (
+        deal.expectedStudents !== undefined && 
+        Number(deal.expectedStudents) < 0
+    ) {
+        throw new Error(
+            "Exepected students cannot be negative",
+        );
+    }
+    if(
+        deal.expectedCTC !== undefined && 
+        deal.expectedCTC !== null &&
+        Number(deal.expectedCTC) < 0
+    ) {
+        throw new Error("Expected CTC cannot be negative");
+    }
+    return deal;
+}
+function serializeDeal(deal){
+    if(!deal){
+        return deal;
+    }
+    return {
+        ...deal,
+        stage: stageLabels[deal.stage] ?? deal.stage,
+        source: sourceLabels[deal.source] ?? deal.source,
+        expectedCTC:
+            deal.expectedCTC !== null &&
+            deal.expectedCTC !== undefines
+                ? Number(deal.expectedCTC)
+                : null,
+    };
+}
+
+class DealPipelineService {
+    async createDeal(data, createdBy = null){
+        const dealData = normalizeDealData(data);
+        if(!dealData.companyId){
+            throw new Error("Company is rewuired");
+        }
+        if(!dealData.ownerId){
+            throw new Error("deal owner is required");
+        }
+        if(!dealData.dealCode){
+            throw new Error("Deal Code is required");
+        }
+        if(!dealData.title){
+            throw new Error("deal title is required");
+        }
+        
+        const [company, owner, existingDeal] = 
+        await Promise.all([
+            prisma.comnpany360.findFirst({
+                where: {
+                    id: dealData.companyId,
+                    deletedAt: null,
+                },
+                select: { id: true },
+            }),
+            prisma.user.findUnique({
+                where: {
+                    id: Number(dealData.ownerId),
+                },
+                select: { id: true },
+            }),
+            prisma.dealPipeline.findUnique({
+                where : {
+                    dealCode: dealData.dealCode,
+                },
+                select : { id : true },
+            }),
+        ]);
+    }
+}
