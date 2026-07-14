@@ -214,6 +214,24 @@ class DealPipelineService {
                 createdAt : now,
                 updatedAt: now,
             },
-        })
+            include : {
+                company: {
+                    select : {
+                        id : true,
+                        companyCode: true,
+                        companyName: true,
+                    },
+                },
+                owner : {
+                    select : {
+                        id: true,
+                        name : true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+        });
+        return serializeDeal(deal);
     }
 }
