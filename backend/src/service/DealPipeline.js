@@ -194,5 +194,15 @@ class DealPipelineService {
                 select : { id : true },
             }),
         ]);
+        if(!company){
+            throw new Error("company not found");
+        }
+        if(!owner){
+            throw new Error("deal not found");
+        }
+        if(existingDeal){
+            throw new Error("deal code already exists");
+        }
+        const now = new Date();
     }
 }
