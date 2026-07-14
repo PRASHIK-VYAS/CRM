@@ -91,3 +91,211 @@ function pickDealData(data){
             .map((field) => [field, data[field]]),
     );
 }
+
+function normalizeDealData(data){
+    const deal = pinkDealData(data);
+
+    if(deal.dealCode){
+        deal.dealCode = deal.dealCode.trim().toUpperCase();
+    }
+    if(deal.title){
+        deal.title = deal.title.trim();
+    }
+    if(deal.decisionMakerEmail){
+        deal.decisionMakerEmail = deal.decisionMakerEmail
+        .trim
+        .toLowerCase();
+    }
+    if(deal.stage){
+        deal.stage = normalizeEnum(deal.stage, stageMap);
+    }
+    if(deal.source){
+        if(deal[field]){
+            deal[field] = new Date(deal[field]);
+        }
+    }
+    if(
+        deal.probability != undefined && 
+        (Number(deal.probability) < 0 || 
+         Number(deal.probability) > 100)
+    ) {
+        throw new Error(
+            "Deal probability must be between 0 and 100",
+        );
+    }
+    if (
+        deal.expectedStudents !== undefined && 
+        Number(deal.expectedStudents) < 0
+    ) {
+        throw new Error(
+            "Exepected students cannot be negative",
+        );
+    }
+    if(
+        deal.expectedCTC !== undefined && 
+        deal.expectedCTC !== null &&
+        Number(deal.expectedCTC) < 0
+    ) {
+        throw new Error("Expected CTC cannot be negative");
+    }
+    return deal;
+}
+function serializeDeal(deal){
+    if(!deal){
+        return deal;
+    }
+    return {
+        ...deal,
+        stage: stageLabels[deal.stage] ?? deal.stage,
+        source: sourceLabels[deal.source] ?? deal.source,
+        expectedCTC:
+            deal.expectedCTC !== null &&
+            deal.expectedCTC !== undefines
+                ? Number(deal.expectedCTC)
+                : null,
+    };
+}
+
+class DealPipelineService {
+    async createDeal(data, createdBy = null){
+        const dealData = normalizeDealData(data);
+        if(!dealData.companyId){
+            throw new Error("Company is rewuired");
+        }
+        if(!dealData.ownerId){
+            throw new Error("deal owner is required");
+        }
+        if(!dealData.dealCode){
+            throw new Error("Deal Code is required");
+        }
+        if(!dealData.title){
+            throw new Error("deal title is required");
+        }
+        
+        const [company, owner, existingDeal] = 
+        await Promise.all([
+            prisma.comnpany360.findFirst({
+                where: {
+                    id: dealData.companyId,
+                    deletedAt: null,
+                },
+                select: { id: true },
+            }),
+            prisma.user.findUnique({
+                where: {
+                    id: Number(dealData.ownerId),
+                },
+                select: { id: true },
+            }),
+            prisma.dealPipeline.findUnique({
+                where : {
+                    dealCode: dealData.dealCode,
+                },
+                select : { id : true },
+            }),
+        ]);
+        if(!company){
+            throw new Error("company not found");
+        }
+        if(!owner){
+            throw new Error("deal not found");
+        }
+        if(existingDeal){
+            throw new Error("deal code already exists");
+        }
+        const now = new Date();
+        const deal = await prisma.dealPipeline.create({
+            data : {
+                id: crypto.randomUUID(),
+                ...dealData,
+                ownerId: Number(dealData.ownerId),
+                createdBy,
+                updatedby: createdBy,
+                createdAt : now,
+                updatedAt: now,
+            },
+            include : {
+                company: {
+                    select : {
+                        id : true,
+                        companyCode: true,
+                        companyName: true,
+                    },
+                },
+                owner : {
+                    select : {
+                        id: true, 
+                        name : true,
+                        email: true,
+                        role: true,
+                    },
+                },
+            },
+        });
+        return serializeDeal(deal);
+    }
+    async getDefaultSettings({
+        page = 1,
+        limit = 20,
+        search,
+        companyId,
+        ownerId,
+        stage,
+        priority,
+        source,
+        riskLevel,
+        minimumProbability,
+        maximumProbability,
+        followUpFrom,
+        followUpTo,
+        includeArchived = false,
+        includeDeleted = false,
+        sortBy = "createdAt",
+        sortOrder = "desc",
+    } = {}) {
+        const parsedPage = Math.max(Number(page) || 1, 1);
+        const parsedLimit = Math.min(
+            Math.max(Number(limit) || 20, 1),
+            100,
+        );
+        const allowedSortFields = new Set([
+            "dealCode",
+            "title",
+            "stage",
+            "priority",
+            "probability",
+            "expectedCTC",
+            "expectedHiringDate",
+            "createdAt",
+            "updatedAt",
+        ]);
+        const orderField = allowedSortFields.has(sortBy)
+            ? sortBy
+            : "createdAt";
+        const conditions = [];
+
+        if(!includeDeleted){
+            conditions.push({deletedAt : null});
+        }
+        if(!includeArchived){
+            conditions.push({
+                OR: [
+                    { isArchived : false},
+                    { isArchived: null},
+                ],
+            });
+        }
+        if(companyId){
+            conditions.push({ companyId });
+        }
+        if(ownerId){
+            conditions.push({ ownerId: Number(ownerId)});
+        }
+        if(stage){
+            conditions.push([
+                stage: normalizeEnum(stage, stageMap),
+            ]);
+        }
+        
+    }
+}
