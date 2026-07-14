@@ -1,10 +1,7 @@
 // backend/src/service/Company360.js
 
 import crypto from "node:crypto"; // crypto is a built-in module in Node.js, no need to install it and it is used for generating unique identifiers (UUIDs) for new company records. and also to hash the password of the user when creating a new user record. 🔐 Hashing passwords or data
-//🔑 Generating random strings or IDs
-//🛡️ Encrypting and decrypting data
-//✍️ Creating digital signatures
-//🔒 Verifying signatures
+
 
 
 import prisma from "../config/prisma.js";

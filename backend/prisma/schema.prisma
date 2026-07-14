@@ -48,7 +48,7 @@ model Alumni {
   createdAt          DateTime                @db.Timestamptz(6)
   updatedAt          DateTime                @db.Timestamptz(6)
   company            Company360?             @relation(fields: [companyId], references: [id])
-
+  employments Employment[] 
   @@index([companyId], map: "alumni_company_id")
   @@map("alumni")
 }
@@ -84,10 +84,11 @@ model Company360 {
   createdAt         DateTime          @db.Timestamptz(6)
   updatedAt         DateTime          @db.Timestamptz(6)
   deletedAt         DateTime?         @db.Timestamptz(6)
-  alumni            Alumni[]
+  alumni            Alumni[]          
   deals             DealPipeline[]
   mous              MoU[]
   outreaches        Outreach[]
+  employments   Employment[] 
 
   @@index([city], map: "company360_city")
   @@index([healthScore], map: "company360_health_score")
@@ -409,4 +410,48 @@ enum OutreachStatus {
   MISSED
 
   @@map("enum_outreaches_status")
+}
+
+enum EmploymentType {
+  FULL_TIME @map("Full Time")
+  PART_TIME @map("Part Time")
+  CONTRACT
+  INTERNSHIP
+  @@map("enum_employment_employmentType")
+
+}
+
+enum WorkMode {
+  ON_SITE @map("On Site")
+  REMOTE
+  HYBRID
+  @@map("enum_employment_workMode")
+
+}
+
+model Employment {
+  id  String  @id @db.Uuid
+  alumniId  String @db.Uuid
+  companyId String  @db.Uuid
+  designation String @db.VarChar(255)
+  department String? @db.VarChar(100)
+  startDate DateTime @db.Date
+  endDate DateTime? @db.Date
+  isCurrent  Boolean @default(true)
+  employmentType EmploymentType @default(FULL_TIME)
+  workMode WorkMode @default(ON_SITE)
+  location String? @db.VarChar(255)
+  description String? 
+  remarks String? 
+  createdAt DateTime @db.Timestamptz(6)
+  updatedAt DateTime @db.Timestamptz(6)
+
+  alumni Alumni @relation(fields: [alumniId], references: [id], onDelete:Cascade)
+  company Company360 @relation(fields: [companyId], references: [id], onDelete:Cascade)
+
+  @@index([alumniId])
+  @@index([companyId])
+  @@index([alumniId, isCurrent])
+  @@index([companyId, isCurrent])
+  @@map("employment")
 }
