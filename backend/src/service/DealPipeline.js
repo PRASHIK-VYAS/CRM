@@ -319,5 +319,18 @@ class DealPipelineService {
                 },
             });
         }
+        if(followUpFrom || followUpTo){
+            conditions.push({
+                nextFollowUpDate : {
+                    ...DealPipelineService(followUpFrom && {
+                        gte: new Date(followUpFrom),
+                    }),
+                    ...DealPipelineService(followUpTo && {
+                        lte: new Date(followUpTo),
+                    }),
+                },
+            });
+        }
+        
     }
 }
