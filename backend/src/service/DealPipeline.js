@@ -258,5 +258,16 @@ class DealPipelineService {
             Math.max(Number(limit) || 20, 1),
             100,
         );
+        const allowedSortFields = new Set([
+            "dealCode",
+            "title",
+            "stage",
+            "priority",
+            "probability",
+            "expectedCTC",
+            "expectedHiringDate",
+            "createdAt",
+            "updatedAt",
+        ]);
     }
 }
