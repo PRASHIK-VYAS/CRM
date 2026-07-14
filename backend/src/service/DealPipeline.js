@@ -331,6 +331,53 @@ class DealPipelineService {
                 },
             });
         }
-        
+        if(search?.trim()) {
+            const searchValue = search.trim();
+
+            conditions.push({
+                OR: [
+                    {
+                        dealCode: {
+                            contains : searchValue,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        title: {
+                            contains: searchValue,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        leadOwner: {
+                            contains: searchValue,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        decisionMaker: {
+                            contains: searchValue,
+                            mode : "insensitive",
+                        },
+                    },
+                    {
+                        company : {
+                            companyName: {
+                                contains: searchValue,
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                    {
+                        owner:{
+                            name: {
+                                contains: searchValue,
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                ],
+            });
+        }
     }
 }
