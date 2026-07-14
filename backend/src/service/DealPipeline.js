@@ -453,5 +453,40 @@ class DealPipelineService {
                 },
             },
         });
+        if(!deal){
+            throw new Error("Deal not found");
+        }
+        return serializeDeal(deal);
+    }
+    async getDealByCompany(companyId){
+        const company = await prisma.company360.findFirst({
+            where : {
+                id : companyId,
+                deletedAt: null,
+            },
+            select: { id : true },
+        });
+        if(!company){
+            throw new Error("company not found");
+        }
+        const deals = await prisma.dealPipeline.findMany({
+            where : {
+                companyId,
+                deletedAt: null,
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            include : {
+                owner : {
+                    select: {
+                        id: true,
+                        name : true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        return deals.map(serializeDeal);
     }
 }
