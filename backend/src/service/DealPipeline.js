@@ -379,5 +379,37 @@ class DealPipelineService {
                 ],
             });
         }
+        const where = 
+            conditions.length > 0 ? { AND: conditions } : {};
+        const [deal, total] = await prisma.$transaction([
+            prisma.dealPipeline.findMany({
+                where,
+                skip: (parsedPage - 1) * parsedLimit,
+                take: parsedLimit,
+                orderBy: {
+                    [orderField]:
+                        sortOrder === "asc" ? "asc" : "desc",
+                },
+                include : {
+                    company: {
+                        select: {
+                            id: true,
+                            companyCode: true,
+                            companyName: true,
+                            status: true,
+                        },
+                    },
+                    owner: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                        },
+                    },
+                },
+            }),
+            prisma.dealPipeline.count({ where }),
+        ]);
     }
 }
