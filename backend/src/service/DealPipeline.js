@@ -204,5 +204,16 @@ class DealPipelineService {
             throw new Error("deal code already exists");
         }
         const now = new Date();
+        const deal = await prisma.dealPipeline.create({
+            data : {
+                id: crypto.randomUUID(),
+                ...dealData,
+                ownerId: Number(dealData.ownerId),
+                createdBy,
+                updatedby: createdBy,
+                createdAt : now,
+                updatedAt: now,
+            },
+        })
     }
 }
