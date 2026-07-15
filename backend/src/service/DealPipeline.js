@@ -716,4 +716,29 @@ class DealPipelineService {
         });
         return serializeDeal(deal);
     }
+
+    async archiveDeal(id, updatedBy = null){
+        await this.getDealById(id);
+        const deal = await prisma.dealPipeline.findFirst({
+            where : {
+                id, 
+                deletedAt : null,
+                isArchived : true,
+            },
+        });
+        if(!deal) {
+            throw new Error("archived deal not found");
+        }
+        const restoredDeal = 
+            await prisma.dealPipeline.update({
+                where : {id},
+                data: {
+                    isArchived: false,
+                    updatedBy,
+                    updatedAt: new Date(),
+            },
+        });
+        return serializeDeal(deal);
+    }
+    
 }
