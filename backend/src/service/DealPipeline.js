@@ -764,4 +764,10 @@ class DealPipelineService {
 
         return serializeDeal(restoredDeal);
     }
+    async permanentlyDeleteDeal(id){
+        const deal = await prisma.dealPipeline.findUnique({
+            where : { id },
+            select : {id : true},
+        });
+    }
 }
