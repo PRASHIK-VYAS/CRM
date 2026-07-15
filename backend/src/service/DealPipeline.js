@@ -637,7 +637,41 @@ class DealPipelineService {
                     ? new Date(nextFollowUpDate)
                     : null;
         }
+        if(
+            normalizedStage === "MoU_Signed" ||
+            normalizedStage === "Strategic_Partner"
+        ) {
+            stageData.closeDate = now;
+            stageData.probability = 100;
+            stageData.lostReason = null;
+        }
 
-        
+        if(normalizedStage === "Lost"){
+            stageData.closeDate = now;
+            stageData.probability = 0;
+            stageData.lostReason = 
+                lostReason?.trim() || "not specified";
+        }
+        const deal = await prisma.dealPipeline.update({
+            where : { id },
+            data : stageData,
+            include : {
+                company : {
+                    select: {
+                        id : true,
+                        comapanyCode : true,
+                        companyName : true,
+                    },
+                },
+                owner : {
+                    select : {
+                        id : true,
+                        name : true,
+                        email : true,
+                    },
+                },
+            },
+        }) ;
+        return serializeDeal(deal);
     }
 }
