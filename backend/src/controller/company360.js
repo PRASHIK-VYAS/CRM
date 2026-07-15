@@ -81,3 +81,23 @@ export async function getCompanyById(req, res){
     }
 }
 
+// get company details
+export async function getCompanyDetails(req, res){
+    try {
+        const { id } = req.params;
+        const company = await company360Service.getCompanyDetails(id);
+        if(!company){
+            return res.status(404).json({
+                success: false,
+                message: "company not found",
+            });
+        }
+        return res.status(200).json({ success : true, data: company});
+    } catch (error) {
+        console.error("get company details failed", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "failed to fetch company details",
+        });
+    }
+}
