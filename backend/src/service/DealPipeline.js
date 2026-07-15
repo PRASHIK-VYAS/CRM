@@ -628,5 +628,16 @@ class DealPipelineService {
             ? new Date(nextFollowUpDate)
             : now;
         }
+        if(normalizedStage === "Proposal_Sent"){
+            stageData.proposalSentDate = now;
+        }
+        if(normalizedStage === "MoU_Discussion"){
+            stageData.mouExpectedDate = 
+                nextFollowUpDate
+                    ? new Date(nextFollowUpDate)
+                    : null;
+        }
+
+        
     }
 }
