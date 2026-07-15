@@ -822,4 +822,15 @@ class DealPipelineService {
         });
         return deals.map(serializeDeal);
     }
+    async getPipelineStatistics({ ownerId } = {}) {
+        const baseWhere = {
+        deletedAt: null,
+        OR: [
+            { isArchived: false },
+            { isArchived: null },
+        ],
+        ...(ownerId && {
+            ownerId: Number(ownerId),
+        }),
+        };
 }
