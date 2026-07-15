@@ -292,10 +292,623 @@ class DealPipelineService {
             conditions.push({ ownerId: Number(ownerId)});
         }
         if(stage){
-            conditions.push([
+            conditions.push({
                 stage: normalizeEnum(stage, stageMap),
-            ]);
+            });
         }
-        
+        if (priority){
+            conditions.push({ priority });
+        }
+        if(source){
+            conditions.push({
+                source: normalizeEnum(source, sourceMap),
+            });
+        }
+        if(riskLevel){
+            conditions.push({ riskLevel });
+        }
+        if(
+            minimumProbability !== undefined || 
+            maximumProbability !== undefined
+        ) {
+            conditions.push({
+                probability: {
+                    ...(minimumProbability !== undefined && {
+                        gte: Number(minimumProbability),
+                    }),
+                },
+            });
+        }
+        if(followUpFrom || followUpTo){
+            conditions.push({
+                nextFollowUpDate : {
+                    ...DealPipelineService(followUpFrom && {
+                        gte: new Date(followUpFrom),
+                    }),
+                    ...DealPipelineService(followUpTo && {
+                        lte: new Date(followUpTo),
+                    }),
+                },
+            });
+        }
+        if(search?.trim()) {
+            const searchValue = search.trim();
+
+            conditions.push({
+                OR: [
+                    {
+                        dealCode: {
+                            contains : searchValue,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        title: {
+                            contains: searchValue,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        leadOwner: {
+                            contains: searchValue,
+                            mode: "insensitive",
+                        },
+                    },
+                    {
+                        decisionMaker: {
+                            contains: searchValue,
+                            mode : "insensitive",
+                        },
+                    },
+                    {
+                        company : {
+                            companyName: {
+                                contains: searchValue,
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                    {
+                        owner:{
+                            name: {
+                                contains: searchValue,
+                                mode: "insensitive",
+                            },
+                        },
+                    },
+                ],
+            });
+        }
+        const where = 
+            conditions.length > 0 ? { AND: conditions } : {};
+        const [deal, total] = await prisma.$transaction([
+            prisma.dealPipeline.findMany({
+                where,
+                skip: (parsedPage - 1) * parsedLimit,
+                take: parsedLimit,
+                orderBy: {
+                    [orderField]:
+                        sortOrder === "asc" ? "asc" : "desc",
+                },
+                include : {
+                    company: {
+                        select: {
+                            id: true,
+                            companyCode: true,
+                            companyName: true,
+                            status: true,
+                        },
+                    },
+                    owner: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            role: true,
+                        },
+                    },
+                },
+            }),
+            prisma.dealPipeline.count({ where }),
+        ]);
+
+        return {
+            data: deals.map(serializeDeal),
+            pagination: {
+                page: parsedPage,
+                limit: parsedLimit,
+                total,
+                totalPages: Math.ceil(total / parsedLimit),
+            },
+        };
+    }
+
+    async getDealById(
+        id,
+        { includeDeleted = false } = {},
+    ) {
+        const deal = await prisma.dealPipeline.findFirst({
+        where: {
+            id,
+            ...(includeDeleted ? {} : { deletedAt: null }),
+        },
+        include: {
+            company: {
+            select: {
+                id: true,
+                companyCode: true,
+                companyName: true,
+                status: true,
+                relationshipStage: true,
+                healthScore: true,
+                },
+                },
+                owner: {
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    },
+                },
+            },
+        });
+        if(!deal){
+            throw new Error("Deal not found");
+        }
+        return serializeDeal(deal);
+    }
+    async getDealByCompany(companyId){
+        const company = await prisma.company360.findFirst({
+            where : {
+                id : companyId,
+                deletedAt: null,
+            },
+            select: { id : true },
+        });
+        if(!company){
+            throw new Error("company not found");
+        }
+        const deals = await prisma.dealPipeline.findMany({
+            where : {
+                companyId,
+                deletedAt: null,
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+            include : {
+                owner : {
+                    select: {
+                        id: true,
+                        name : true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        return deals.map(serializeDeal);
+    }
+    async getDealByOwner(ownerId){
+        const owner = await prisma.user.findUnique({
+            where : {
+                id: Number(ownerId),
+            },
+            select : {id : true},
+        });
+        if(!owner){
+            throw new Error("deal owner not found");
+        }
+        const deals = await prisma.dealPipeline.findMany({
+            where :{
+                ownerId: Number(ownerId),
+                deletedAt: null,
+                OR: [
+                    { isArchived: false},
+                    { isArchived: null},
+                ],
+            },
+            orderBy: [
+                {
+                    nextFollowUpDate: {
+                        sort : "asc",
+                        nulls : "last",
+                    },
+                },
+                {
+                    updatedAt: "desc",
+                },
+            ],
+            include : {
+                company: {
+                    select : {
+                        id: true,
+                        companyCode: true,
+                        companyName: true,
+                    },
+                },
+            },
+        });
+        return deals.map(serializeDeal);
+    }
+    async updateDeal(id, data, updatedBy = null){
+        await this.getDealById(id);
+        const dealData = normalizeDealData(data);
+        if(dealData.companyId){
+            const company = await prisma.company360.findFirst({
+                where : {
+                    id: dealData.companyId,
+                    deletedAt: null,
+                },
+                select : { id: true},
+            });
+            if(!company){
+                throw new Error("company not found");
+            }
+        }
+        if(dealData.ownerId){
+            dealData.ownerId = Number(dealData.ownerId);
+            const owner = await prisma.user.findUnique({
+                where : {
+                    id: dealData.ownerId,
+                },
+                select : { id: true},
+            });
+            if(!owner){
+                throw new Error("deal owner not found");
+            }
+        }
+        const deal = await prisma.dealPipeline.update({
+            where : { id },
+            data : {
+                ...dealData,
+                updatedBy,
+                updatedAt: new Date(),
+            },
+            include : {
+                company: {
+                    select : {
+                        id : true,
+                        companyCode : true,
+                        companyName: true,
+                    },
+                },
+                owner : {
+                    select : {
+                        id : true,
+                        name : true,
+                        email : true,
+                        role: true,
+                    },
+                },
+            },
+        });
+        return serializeDeal(deal);
+    }
+
+    async changeDealStage(
+        id, 
+        stage, 
+        {
+            probability,
+            nextAction,
+            nextFollowUpDate,
+            lostReason,
+            updatedBy = null,
+        } = {},
+    ) {
+        await this.getDealById(id);
+        const normalizedStage = normalizeEnum(stage, stageMap);
+        const now = new Date();
+
+        const stageData = {
+            stage: normalizedStage,
+            lastActivityDate: now,
+            updated,
+            updatedAt : now,
+        };
+        if (probability !== undefined){
+            const parsedProbability = Number(probability);
+
+            if(
+                parsedProbability < 0 ||
+                parsedprobability > 100
+            ) {
+                throw new Error(
+                    "Deal probability must be between 0 and 100",
+                );
+            }
+            stageData.probability = parsedProbability;
+        }
+        if(nextAction !== undefined){
+            stageData.nextAction = nextAction;
+        }
+        if(nextFollowUpDate !== undefined){
+            stageData.nextFollowUpDate = nextFollowUpDate
+            ? new Date(nextFollowUpDate)
+            : now;
+        }
+        if(normalizedStage === "Proposal_Sent"){
+            stageData.proposalSentDate = now;
+        }
+        if(normalizedStage === "MoU_Discussion"){
+            stageData.mouExpectedDate = 
+                nextFollowUpDate
+                    ? new Date(nextFollowUpDate)
+                    : null;
+        }
+        if(
+            normalizedStage === "MoU_Signed" ||
+            normalizedStage === "Strategic_Partner"
+        ) {
+            stageData.closeDate = now;
+            stageData.probability = 100;
+            stageData.lostReason = null;
+        }
+
+        if(normalizedStage === "Lost"){
+            stageData.closeDate = now;
+            stageData.probability = 0;
+            stageData.lostReason = 
+                lostReason?.trim() || "not specified";
+        }
+        const deal = await prisma.dealPipeline.update({
+            where : { id },
+            data : stageData,
+            include : {
+                company : {
+                    select: {
+                        id : true,
+                        comapanyCode : true,
+                        companyName : true,
+                    },
+                },
+                owner : {
+                    select : {
+                        id : true,
+                        name : true,
+                        email : true,
+                    },
+                },
+            },
+        }) ;
+        return serializeDeal(deal);
+    }
+    async reassignDeal(id, ownerId, updatedBy = null){
+        await this.getDealById(id);
+        const owner = await prisma.user.findUnique({
+            where : {
+                id : Number(ownerId),
+            },
+            select : {
+                id : true,
+                name : true,
+                email : true,
+            },
+        });
+        if(!owner){
+            throw new Error("New deal owner not found");
+        }
+        const deal = await prisma.dealPipeline.update({
+            where : { id },
+            data : {
+                ownerId : owner.id,
+                updatedBy,
+                updatedAt: new Date(),
+            },
+            include : {
+                company: {
+                    select : {
+                        id: true,
+                        companyCode: true,
+                        companyName: true,
+                    },
+                },
+                owner : {
+                    select : {
+                        id: true,
+                        name : true,
+                        email : true,
+                        role : true,
+                    },
+                },
+            },
+        });
+        return serializeDeal(deal);
+    }
+
+    async archiveDeal(id, updatedBy = null){
+        await this.getDealById(id);
+        const deal = await prisma.dealPipeline.findFirst({
+            where : {
+                id, 
+                deletedAt : null,
+                isArchived : true,
+            },
+        });
+        if(!deal) {
+            throw new Error("archived deal not found");
+        }
+        const restoredDeal = 
+            await prisma.dealPipeline.update({
+                where : {id},
+                data: {
+                    isArchived: false,
+                    updatedBy,
+                    updatedAt: new Date(),
+            },
+        });
+        return serializeDeal(deal);
+    }
+    async restoreDeal(id, updatedBy = null) {
+        const deal = await prisma.dealPipeline.findFirst({
+        where: {
+            id,
+            deletedAt: { not: null },
+        },
+        });
+        if (!deal) {
+        throw new Error("Deleted deal not found");
+        }
+
+        const restoredDeal =
+        await prisma.dealPipeline.update({
+            where: { id },
+            data: {
+            deletedAt: null,
+            isArchived: false,
+            updatedBy,
+            updatedAt: new Date(),
+            },
+        });
+
+        return serializeDeal(restoredDeal);
+    }
+    async permanentlyDeleteDeal(id){
+        const deal = await prisma.dealPipeline.findUnique({
+            where : { id },
+            select : {id : true},
+        });
+        if (!deal) {
+        throw new Error("Deal not found");
+        }
+
+        return prisma.dealPipeline.delete({
+        where: { id },
+        });
+    }
+    async getUpcomingFollowUps({
+        ownerId,
+        days = 7,
+    } = {} ) {
+        const from = new Date();
+        const to = new Date();
+
+        to.setDate(to.getDate() + Math.max(Number(days) || 7, 1));
+        const deals = await prisma.dealPipeline.find({
+            where : {
+                deletedAt: null,
+                OR : [
+                    { isArchived: false},
+                    { isArchived: null},
+                ],
+                ...(ownerId && {
+                    ownerId: Number(ownerId),
+                }),
+                nextFollowUpDate: {
+                    gte: from,
+                    lte: to,
+                },
+            },
+            orderBy: {
+                nextFollowUpDate: "asc",
+            },
+            include: {
+                company: {
+                    select: {
+                        id: true,
+                        companyCode: true,
+                        companyName: true,
+                    },
+                },
+                owner: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        return deals.map(serializeDeal);
+    }
+    async getPipelineStatistics({ ownerId } = {}) {
+        const baseWhere = {
+        deletedAt: null,
+        OR: [
+            { isArchived: false },
+            { isArchived: null },
+        ],
+        ...(ownerId && {
+            ownerId: Number(ownerId),
+        }),
+        };
+        const [
+            totalDeals,
+            totalExpectedStudents,
+            averageProbability,
+            expectedCTC,
+            dealsByStage,
+            dealsByPriority,
+            dealsByRiskLevel,
+            ] = await Promise.all([
+            prisma.dealPipeline.count({
+                where: baseWhere,
+            }),
+            prisma.dealPipeline.aggregate({
+                where: baseWhere,
+                _sum: {
+                expectedStudents: true,
+                },
+            }),
+
+            prisma.dealPipeline.aggregate({
+                where: baseWhere,
+                _avg: {
+                probability: true,
+                },
+            }),
+            prisma.dealPipeline.aggregate({
+                where: baseWhere,
+                _sum: {
+                expectedCTC: true,
+                },
+            }),
+
+            prisma.dealPipeline.groupBy({
+                by: ["stage"],
+                where: baseWhere,
+                _count: {
+                id: true,
+                },
+            }),
+            prisma.dealPipeline.groupBy({
+                by: ["priority"],
+                where: baseWhere,
+                _count: {
+                    id: true,
+                },
+            }),
+            ]);
+            return {
+            totalDeals,
+            totalExpectedStudents:
+                totalExpectedStudents._sum.expectedStudents ?? 0,
+            averageProbability: Number(
+                averageProbability._avg.probability ?? 0,
+            ).toFixed(2),
+            totalExpectedCTC: Number(
+                expectedCTC._sum.expectedCTC ?? 0,
+            ),
+            byStage: dealsByStage.map(
+                ({ stage, _count }) => ({
+                stage: stageLabels[stage] ?? stage,
+                count: _count.id,
+                }),
+            ),
+            byPriority: dealsByPriority.map(
+                ({ priority, _count }) => ({
+                priority,
+                count: _count.id,
+                }),
+            ),
+            byRiskLevel: dealsByRiskLevel.map(
+                ({ riskLevel, _count }) => ({
+                riskLevel,
+                count: _count.id,
+                }),
+            ),
+        };
     }
 }
+export default new DealPipelineService();
