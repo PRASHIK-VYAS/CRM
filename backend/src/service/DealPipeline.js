@@ -907,4 +907,7 @@ class DealPipelineService {
                 riskLevel,
                 count: _count.id,
                 }),
+            ),
+        };
+    }
 }
