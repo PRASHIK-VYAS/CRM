@@ -674,4 +674,17 @@ class DealPipelineService {
         }) ;
         return serializeDeal(deal);
     }
+    async reassignDeal(id, ownerId, updatedBy = null){
+        await this.getDealById(id);
+        const owner = await prisma.user.findUnique({
+            where : {
+                id : Number(ownerId),
+            },
+            select : {
+                id : true,
+                name : true,
+                email : true,
+            },
+        });
+    }
 }
