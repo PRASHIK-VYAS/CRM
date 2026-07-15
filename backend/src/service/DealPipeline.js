@@ -845,4 +845,17 @@ class DealPipelineService {
             prisma.dealPipeline.count({
                 where: baseWhere,
             }),
+            prisma.dealPipeline.aggregate({
+                where: baseWhere,
+                _sum: {
+                expectedStudents: true,
+                },
+            }),
+
+            prisma.dealPipeline.aggregate({
+                where: baseWhere,
+                _avg: {
+                probability: true,
+                },
+            }),
 }
