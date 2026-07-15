@@ -686,5 +686,34 @@ class DealPipelineService {
                 email : true,
             },
         });
+        if(!owner){
+            throw new Error("New deal owner not found");
+        }
+        const deal = await prisma.dealPipeline.update({
+            where : { id },
+            data : {
+                ownerId : owner.id,
+                updatedBy,
+                updatedAt: new Date(),
+            },
+            include : {
+                company: {
+                    select : {
+                        id: true,
+                        companyCode: true,
+                        companyName: true,
+                    },
+                },
+                owner : {
+                    select : {
+                        id: true,
+                        name : true,
+                        email : true,
+                        role : true,
+                    },
+                },
+            },
+        });
+        return serializeDeal(deal);
     }
 }
