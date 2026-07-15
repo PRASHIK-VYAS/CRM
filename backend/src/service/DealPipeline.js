@@ -559,7 +559,74 @@ class DealPipelineService {
             }
         }
         const deal = await prisma.dealPipeline.update({
-            // code remain
-        })
+            where : { id },
+            data : {
+                ...dealData,
+                updatedBy,
+                updatedAt: new Date(),
+            },
+            include : {
+                company: {
+                    select : {
+                        id : true,
+                        companyCode : true,
+                        companyName: true,
+                    },
+                },
+                owner : {
+                    select : {
+                        id : true,
+                        name : true,
+                        email : true,
+                        role: true,
+                    },
+                },
+            },
+        });
+        return serializeDeal(deal);
+    }
+
+    async changeDealStage(
+        id, 
+        stage, 
+        {
+            probability,
+            nextAction,
+            nextFollowUpDate,
+            lostReason,
+            updatedBy = null,
+        } = {},
+    ) {
+        await this.getDealById(id);
+        const normalizedStage = normalizeEnum(stage, stageMap);
+        const now = new Date();
+
+        const stageData = {
+            stage: normalizedStage,
+            lastActivityDate: now,
+            updated,
+            updatedAt : now,
+        };
+        if (probability !== undefined){
+            const parsedProbability = Number(probability);
+
+            if(
+                parsedProbability < 0 ||
+                parsedprobability > 100
+            ) {
+                throw new Error(
+                    "Deal probability must be between 0 and 100",
+                );
+            }
+            stageData.probability = parsedProbability;
+        }
+        if(nextAction !== undefined){
+            stageData.nextAction = nextAction;
+        }
+        if(nextFollowUpDate !== undefined){
+            stageData.nextFollowUpDate = nextFollowUpDate
+            ? new Date(nextFollowUpDate)
+            : now;
+        }
     }
 }
