@@ -777,4 +777,49 @@ class DealPipelineService {
         where: { id },
         });
     }
+    async getUpcomingFollowUps({
+        ownerId,
+        days = 7,
+    } = {} ) {
+        const from = new Date();
+        const to = new Date();
+
+        to.setDate(to.getDate() + Math.max(Number(days) || 7, 1));
+        const deals = await prisma.dealPipeline.find({
+            where : {
+                deletedAt: null,
+                OR : [
+                    { isArchived: false},
+                    { isArchived: null},
+                ],
+                ...(ownerId && {
+                    ownerId: Number(ownerId),
+                }),
+                nextFollowUpDate: {
+                    gte: from,
+                    lte: to,
+                },
+            },
+            orderBy: {
+                nextFollowUpDate: "asc",
+            },
+            include: {
+                company: {
+                    select: {
+                        id: true,
+                        companyCode: true,
+                        companyName: true,
+                    },
+                },
+                owner: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+            },
+        });
+        return deals.map(serializeDeal);
+    }
 }
