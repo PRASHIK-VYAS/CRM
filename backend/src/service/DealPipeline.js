@@ -747,4 +747,21 @@ class DealPipelineService {
             deletedAt: { not: null },
         },
         });
+        if (!deal) {
+        throw new Error("Deleted deal not found");
+        }
+
+        const restoredDeal =
+        await prisma.dealPipeline.update({
+            where: { id },
+            data: {
+            deletedAt: null,
+            isArchived: false,
+            updatedBy,
+            updatedAt: new Date(),
+            },
+        });
+
+        return serializeDeal(restoredDeal);
+    }
 }
