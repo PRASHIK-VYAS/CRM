@@ -740,5 +740,11 @@ class DealPipelineService {
         });
         return serializeDeal(deal);
     }
-    
+    async restoreDeal(id, updatedBy = null) {
+        const deal = await prisma.dealPipeline.findFirst({
+        where: {
+            id,
+            deletedAt: { not: null },
+        },
+        });
 }
