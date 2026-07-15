@@ -872,4 +872,39 @@ class DealPipelineService {
                 id: true,
                 },
             }),
+            prisma.dealPipeline.groupBy({
+                by: ["priority"],
+                where: baseWhere,
+                _count: {
+                    id: true,
+                },
+            }),
+            ]);
+            return {
+            totalDeals,
+            totalExpectedStudents:
+                totalExpectedStudents._sum.expectedStudents ?? 0,
+            averageProbability: Number(
+                averageProbability._avg.probability ?? 0,
+            ).toFixed(2),
+            totalExpectedCTC: Number(
+                expectedCTC._sum.expectedCTC ?? 0,
+            ),
+            byStage: dealsByStage.map(
+                ({ stage, _count }) => ({
+                stage: stageLabels[stage] ?? stage,
+                count: _count.id,
+                }),
+            ),
+            byPriority: dealsByPriority.map(
+                ({ priority, _count }) => ({
+                priority,
+                count: _count.id,
+                }),
+            ),
+            byRiskLevel: dealsByRiskLevel.map(
+                ({ riskLevel, _count }) => ({
+                riskLevel,
+                count: _count.id,
+                }),
 }
