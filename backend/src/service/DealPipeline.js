@@ -769,5 +769,12 @@ class DealPipelineService {
             where : { id },
             select : {id : true},
         });
+        if (!deal) {
+        throw new Error("Deal not found");
+        }
+
+        return prisma.dealPipeline.delete({
+        where: { id },
+        });
     }
 }
