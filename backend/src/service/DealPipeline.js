@@ -833,4 +833,16 @@ class DealPipelineService {
             ownerId: Number(ownerId),
         }),
         };
+        const [
+            totalDeals,
+            totalExpectedStudents,
+            averageProbability,
+            expectedCTC,
+            dealsByStage,
+            dealsByPriority,
+            dealsByRiskLevel,
+            ] = await Promise.all([
+            prisma.dealPipeline.count({
+                where: baseWhere,
+            }),
 }
