@@ -911,3 +911,4 @@ class DealPipelineService {
         };
     }
 }
+export default new DealPipelineService();
