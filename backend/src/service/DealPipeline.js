@@ -858,4 +858,18 @@ class DealPipelineService {
                 probability: true,
                 },
             }),
+            prisma.dealPipeline.aggregate({
+                where: baseWhere,
+                _sum: {
+                expectedCTC: true,
+                },
+            }),
+
+            prisma.dealPipeline.groupBy({
+                by: ["stage"],
+                where: baseWhere,
+                _count: {
+                id: true,
+                },
+            }),
 }
