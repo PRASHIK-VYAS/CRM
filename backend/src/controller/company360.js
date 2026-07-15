@@ -54,3 +54,30 @@ export async function getCompanies(req, res){
         });
     }
 }
+
+// get companies by id
+export async function getCompanyById(req, res){
+    try {
+        const { id } = req.params;
+        const { includeDeleted } = req.query;
+
+        const company = await company360Service.getCompanyById(id,{
+            includeDeleted: includeDeleted === "true",
+        });
+
+        if(!company){
+            return res.status(404).json({
+                success: false,
+                message: "company not found",
+            });
+        }
+        return res.status(200).json({ success : true, data : company});
+    } catch(error) {
+        console.error("Get company By ID failed", error);
+        return res.status(500).json({
+            success: false,
+            message: "failed to fetch company",
+        });
+    }
+}
+
