@@ -167,3 +167,19 @@ export async function restoreCompany(req, res){
         });
     }
 }
+
+// permanently delete a company 
+export async function permanentlyDeleteCompany(req, res){
+    try {
+        const { id } = req.params;
+        await company360Service.permanentlyDeleteCompany(id);
+        return res.status(200).json({ success: true, message : "company permanently deleted"});
+    } catch (error) {
+        console.error("permanently delete company failed:", error);
+        const status = error.message === "company not found" ? 404 : 500;
+        return res.status(status).json({
+            success : false,
+            message : error.message || "failed to permanently delete company",
+        });
+    }
+}
