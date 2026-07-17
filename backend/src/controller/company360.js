@@ -151,3 +151,19 @@ export async function softDeleteCompany(req, res){
     }
 }
 
+// restore a soft deleted company 
+export async function restoreCompany(req, res){
+    try {
+        const { id } = req.params;
+        const updatedBy = req.user?.id || null;
+        const company = await company360Service.restoreCompany(id, updatedBy);
+        return res.status(200).json({ success: true, data: company});
+    } catch (error) {
+        console.error("restore company failed", error);
+        const status = error.message === "deleted company not found" ? 404 : 500;
+        return res.status(status).json({
+            success : false,
+            message: error.message || "failed to restore company",
+        });
+    }
+}
