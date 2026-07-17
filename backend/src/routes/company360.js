@@ -24,3 +24,4 @@ router.delete("/:id/restore", restoreCompany);
 router.delete("/:id/permanently-delete", permanentlyDeleteCompany);
 
 export default router;
+

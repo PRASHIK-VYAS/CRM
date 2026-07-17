@@ -3,6 +3,7 @@ import cors from "cors";
 import prisma from "./config/prisma.js";
 import authRoutes from "./routes/auth.js";
 import analyticsRoutes from "./routes/analytics.js";
+import company360Routes from "./routes/company360.js";
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -13,6 +14,7 @@ app.use(express.json());
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 app.use("/auth", authRoutes);
 app.use("/analytics", analyticsRoutes);
+app.use("/api/company360", company360Routes);
 
 async function shutdown(signal) {
   console.log(`${signal} received; closing database connections`);
