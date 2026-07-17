@@ -133,3 +133,21 @@ export async function updateCompany(req, res){
         });
     }
 }
+
+// soft delete a company { isactive / disbaled }
+export async function softDeleteCompany(req, res){
+    try {
+        const { id } = req.params;
+        const updatedBy = req.user?.id || null;
+        const company = await company360Service.softDeleteCompany(id, updatedBy);
+        return res.status(200).json({ success : true, data: company});
+    } catch (error) {
+        console.error("soft delete company failed", error);
+        const status = error.message === "company not found" ? 404 : 500;
+        return res.status(status).json({
+            success: false,
+            message: error.message || " failed to soft delete the company",
+        });
+    }
+}
+
