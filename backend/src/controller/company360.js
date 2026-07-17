@@ -101,3 +101,35 @@ export async function getCompanyDetails(req, res){
         });
     }
 }
+
+// get company stats
+export async function getCompanyStatistics(req, res){
+    try {
+        const { id } = req.params;
+        const stats = await company360Service.getCompanyStatistics(id);
+        return res.status(200).json({ success: true, data: stats});
+    } catch (error) { 
+        console.error("get company satistics failed", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "failed to fetch company statistics",
+        });
+    }
+}
+
+// update any company
+export async function updateCompany(req, res){
+    try {
+        const { id } = req.params;
+        const updatedBy = req.user?.id || null;
+        const company = await company360Service.updateCompany(id, req.body, updatedBy);
+        return res.status(200).json({ success: true, data: company});
+    } catch (error) {
+        console.error("update company failed", error);
+        const status = error.message === "company not found" ? 404 : 500;
+        return res.status(status).json({
+            success: false,
+            message: error.message || "failed to update company",
+        });
+    }
+}
