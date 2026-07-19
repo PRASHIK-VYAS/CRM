@@ -1,0 +1,200 @@
+flowchart TB
+
+%% ==========================================================
+%% CLIENT LAYER
+%% ==========================================================
+
+subgraph USERS["Users"]
+    SA([Super Admin])
+    TPO([TPO Officer])
+    HOD([HOD / Dean])
+    ST([Student])
+    REC([Recruiter])
+end
+
+%% ==========================================================
+%% FRONTEND & SECURITY
+%% ==========================================================
+
+PWA[React PWA]
+API[API Gateway]
+AUTH([JWT Authentication & RBAC])
+
+SA -->|Manages Platform| PWA
+TPO -->|Operates CRM| PWA
+HOD -->|Reviews Insights| PWA
+ST -->|Submits Resume| PWA
+REC -->|Posts Jobs| PWA
+
+PWA --> API
+API --> AUTH
+
+%% ==========================================================
+%% TRANSACTIONAL ENGINE
+%% ==========================================================
+
+subgraph TRANS["Transactional Engine"]
+
+JOB([Job Posting])
+
+APP([Applications])
+
+MATCH([Rule-Based Matching Engine])
+
+PORT([Live Portfolio])
+
+SHORT([Candidate Shortlisting])
+
+INTERVIEW([Interview Process])
+
+OFFER([Offer Management])
+
+JOB -->|Receives Applications| APP
+
+APP -->|Eligibility Data| MATCH
+
+PORT -->|Reviews Portfolio Evidence| MATCH
+
+MATCH -->|Ranks Candidates| SHORT
+
+SHORT -->|Schedules Interviews| INTERVIEW
+
+INTERVIEW -->|Selected Candidates| OFFER
+
+end
+
+%% ==========================================================
+%% STRATEGIC CRM
+%% ==========================================================
+
+subgraph CRM["Strategic CRM"]
+
+LEADS([Corporate Leads])
+
+OUTREACH([Outreach Engine])
+
+INTERACT([Interaction History])
+
+MOU([Digital MoU Vault])
+
+HEALTH([Relationship Health Monitor])
+
+SCORE([Company Health Score])
+
+FEEDBACK([Recruiter Feedback Module])
+
+LEADS -->|Launch Campaign| OUTREACH
+
+OUTREACH -->|Creates Engagement| INTERACT
+
+OUTREACH -->|Negotiates Partnership| MOU
+
+INTERACT -->|Interaction Metrics| HEALTH
+
+MOU -->|MoU Status| HEALTH
+
+HEALTH -->|Updates Score| SCORE
+
+end
+
+%% ==========================================================
+%% ALUMNI NETWORK
+%% ==========================================================
+
+subgraph ALUMNI["Alumni Network"]
+
+ALUM([Alumni Directory])
+
+ROLE([Society / Role Map])
+
+NEWLEAD([New Company Lead])
+
+ALUM -->|Maps Alumni Positions| ROLE
+
+ROLE -->|Warm Introduction| OUTREACH
+
+OUTREACH -->|Generates Opportunity| NEWLEAD
+
+NEWLEAD -->|Added to CRM| LEADS
+
+end
+
+%% ==========================================================
+%% DATABASE
+%% ==========================================================
+
+subgraph DATABASE["Persistent Storage"]
+
+DB[(MySQL Database)]
+
+end
+
+JOB --> DB
+APP --> DB
+MATCH --> DB
+SHORT --> DB
+OFFER --> DB
+
+LEADS --> DB
+INTERACT --> DB
+MOU --> DB
+SCORE --> DB
+
+ALUM --> DB
+ROLE --> DB
+
+%% ==========================================================
+%% EXTERNAL SERVICES
+%% ==========================================================
+
+SMTP[(SMTP Email Gateway)]
+
+OUTREACH -->|Sends Emails| SMTP
+
+%% ==========================================================
+%% STRATEGIC FEEDBACK LOOP
+%% ==========================================================
+
+REC -->|Provides Hiring Feedback| FEEDBACK
+
+FEEDBACK -->|Curriculum Recommendations| HOD
+
+HOD -->|Academic Improvements| TPO
+
+%% ==========================================================
+%% PORTFOLIO INTEGRATION
+%% ==========================================================
+
+ST -->|Uploads Projects| PORT
+
+%% ==========================================================
+%% RECRUITER FLOW
+%% ==========================================================
+
+REC -->|Posts Job| JOB
+
+REC -->|Reviews Shortlist| SHORT
+
+REC -->|Issues Offer| OFFER
+
+%% ==========================================================
+%% TPO OPERATIONS
+%% ==========================================================
+
+TPO -->|Creates Outreach| OUTREACH
+
+TPO -->|Publishes Jobs| JOB
+
+TPO -->|Monitors Company Health| SCORE
+
+%% ==========================================================
+%% REPORTING
+%% ==========================================================
+
+REPORT([Reports & Analytics])
+
+DB -->|Business Data| REPORT
+
+REPORT -->|Placement Insights| TPO
+
+REPORT -->|Academic Reports| HOD

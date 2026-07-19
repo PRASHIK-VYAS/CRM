@@ -1,0 +1,27 @@
+flowchart LR
+
+    subgraph OUTREACH_FLOW["Outreach Queue Architecture"]
+        CLIENT["Client\nPOST /api/outreach/send"] --> EXPRESS["Express.js\n(validate + enqueue)"]
+        EXPRESS --> BULLMQ["BullMQ\n(Redis)"]
+        BULLMQ --> WORKER["Worker Process\n(batch = 50)"]
+        WORKER --> NODEMAILER["Nodemailer\n(pool: 5 conns)"]
+        NODEMAILER --> SMTP["SMTP Gateway"]
+    end
+
+    subgraph MATCH_FLOW["Matching Sieve Pipeline"]
+        JOB["Job Posted\n(required_skills)"] --> NORMALISE["Normalise Tags\nlowercase + trim + dedup"]
+        STUDENT["Student Profile\n(skills + project_tags)"] --> NORMALISE
+        NORMALISE --> INTERSECT["Intersection:\nrequired ∩ student"]
+        INTERSECT --> WEIGHTED["Weighted Sum\nReq:50 + Pref:20 + Proj:15 + Role:10 + CGPA:5"]
+        WEIGHTED --> CLAMP["Clamp [0, 100]"]
+        CLAMP --> SCORE_OUT["match_score\n+ breakdown JSON"]
+    end
+
+    subgraph AUTH_FLOW["JWT Authentication Flow"]
+        REQ["Request\n+ Bearer Token"] --> VERIFY["jwt.verify\ntoken + ACCESS_SECRET"]
+        VERIFY --> DECODE["Decode Payload\n{sub, role, exp}"]
+        DECODE --> DB_LOOKUP["SELECT user\nWHERE id = sub\nAND is_active = 1"]
+        DB_LOOKUP --> ATTACH["Attach req.user\n{id, role, email}"]
+        ATTACH --> ROLE_GATE["requireRole('tpo')\ncheck permission"]
+        ROLE_GATE --> CONTROLLER["Controller\nExecutes"]
+    end

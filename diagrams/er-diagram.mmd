@@ -1,0 +1,20 @@
+erDiagram
+    users ||--o| student_profiles : extends
+    users ||--o| alumni : extends
+    student_profiles ||--o| portfolios : owns
+    student_profiles ||--o{ applications : submits
+    applications }o--|| jobs : targets
+    jobs }o--|| companies : belongs_to
+    companies ||--o{ contacts : has
+    companies ||--o{ interactions : logs
+    companies ||--o{ mous : signs
+    companies ||--o{ outreach_queue : queued
+    contacts ||--o{ interactions : participates
+    users ||--o{ interactions : performs
+    users ||--o{ feedback : writes
+    applications ||--o{ feedback : receives
+    job_shortlists }o--|| jobs : contains
+    job_shortlists }o--|| student_profiles : ranks
+    alumni ||--o{ alumni_company_leads : connects
+    alumni_company_leads }o--|| companies : targets
+    users ||--o{ companies : onboarded_by
