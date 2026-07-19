@@ -25,7 +25,7 @@
 
 This SRS defines the functional and non-functional requirements for EduBridge Enterprise, a centralized SaaS platform for Training and Placement Offices (TPOs). It serves as the contractual baseline between the stakeholders and the development team to ensure a predictable, high-quality delivery within a 100-day window.
 
-EduBridge Enterprise is a comprehensive relationship management system that digitizes the recruiter lifecycle — from initial outreach and MoU signing to placement transactions and alumni networking — serving TPO Admins, Officers, Students, and Recruiters.
+EduBridge Enterprise is a comprehensive relationship management system that digitizes the corporate engagement lifecycle — from initial outreach and MoU signing to placement transactions and alumni networking — serving TPO Admins, Officers, and Students.
 
 ### 1.2 Document Conventions
 
@@ -61,7 +61,7 @@ EduBridge Enterprise provides a centralized capability to manage the institution
 - **Phase 3 (Strategic):** CRM Outreach, MoU Vault, and Alumni Mapping.
 - **Phase 4 (Hardening):** Relationship Health Score, Live Portfolios, and Production Deployment.
 
-**User Roles:** Super Admin, TPO Officer, Student, Recruiter.
+**User Roles:** Super Admin, TPO Officer, Student.
 
 **Out of scope for this release:** Native mobile apps (iOS/Android), AI-based predictive matching (reserved for V2), and integrated payment gateways.
 
@@ -89,20 +89,18 @@ The system utilizes a centralized relational database (MySQL) with Role-Based Ac
 
 ### 2.2 Product Functions — High-Level Summary
 
-| #  | Login     | Phase 1 (Foundation)  | Phase 2 (Transaction)    | Phase 3 (Strategy)     | Phase 4 (Refinement)     |
-|----|-----------|-----------------------|--------------------------|------------------------|--------------------------|
-| 1  | Admin     | User Mgmt, RBAC       | System Config            | Report Generation      | Global Audit             |
-| 2  | TPO Officer | Company/Contact DB  | Job Drive Mgmt           | Outreach, MoU, Alumni  | Health Score, Analytics  |
-| 3  | Student   | Profile Mgmt          | App Tracking             | Portfolio Update       | Offer Acceptance         |
-| 4  | Recruiter | Account Setup         | Job Post → Hire          | Feedback Submission    | Portfolio Review         |
-| 5  | System    | Auth/Session Mgmt     | App Logic                | Email Queue/Reminders  | Health Score Calc        |
+| #  | Login       | Phase 1 (Foundation)  | Phase 2 (Transaction)    | Phase 3 (Strategy)     | Phase 4 (Refinement)     |
+|----|-------------|-----------------------|--------------------------|------------------------|--------------------------|
+| 1  | Admin       | User Mgmt, RBAC       | System Config            | Report Generation      | Global Audit             |
+| 2  | TPO Officer | Company/Contact DB    | Job Drive Mgmt           | Outreach, MoU, Alumni  | Health Score, Analytics  |
+| 3  | Student     | Profile Mgmt          | App Tracking             | Portfolio Update       | Offer Acceptance         |
+| 4  | System      | Auth/Session Mgmt     | App Logic                | Email Queue/Reminders  | Health Score Calc        |
 
 ### 2.3 User Classes and Characteristics
 
 - **Super Admin:** High technical proficiency; manages system health and users.
 - **TPO Officer:** Moderate technical proficiency; primary power user focused on efficiency.
 - **Student:** High technical proficiency; expects a seamless, modern UI.
-- **Recruiter:** High professional expectations; requires a fast, no-friction experience.
 
 ### 2.4 Operating Environment
 
@@ -186,17 +184,6 @@ The system utilizes a centralized relational database (MySQL) with Role-Based Ac
 - **Sub-module: Portfolio Integration**
   - **FR-013** The system SHALL allow students to link live URLs (GitHub, Behance) to their profile.
 
-### 3.3 Login: Recruiter
-
-#### 3.3.1 Phase 2
-
-**Module: Hiring Hub**
-
-- **Sub-module: Job Posting**
-  - **FR-014** The system SHALL allow recruiters to create JDs with specific skill tags.
-- **Sub-module: Candidate Review**
-  - **FR-015** The system SHALL allow recruiters to shortlist candidates based on keyword matching.
-
 ### 3.4 System (Automation)
 
 #### 3.4.1 All Phases
@@ -204,8 +191,8 @@ The system utilizes a centralized relational database (MySQL) with Role-Based Ac
 **Module: Background Engines**
 
 - **Sub-module: Notification Engine**
-  - **FR-016** The system SHALL trigger a reminder for an expiring MoU.
-  - **FR-017** The system SHALL alert the TPO when a high-priority company has not been contacted for 90 days.
+  - **FR-014** The system SHALL trigger a reminder for an expiring MoU.
+  - **FR-015** The system SHALL alert the TPO when a high-priority company has not been contacted for 90 days.
 
 ---
 
