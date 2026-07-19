@@ -244,9 +244,7 @@ Date: 26 June 2026
     7. Glossary
     | Term     | Definition                                  |
     |----------|---------------------------------------------|
-    | la la l  | a la la l                                   |
     | B2B SaaS | Business-to-Business Software as a Service. |
-    | la la l  | a l a l l l l l                             |
     | RBAC     | Role-Based Access Control.                  |
     | TPO      | Training and Placement Office.              |
     | MoU      | Memorandum of Understanding.                |
