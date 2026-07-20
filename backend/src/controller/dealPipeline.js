@@ -233,3 +233,21 @@ export async function deleteDeal(req, res) {
         });
     }
 }
+
+// get upcoming follow ups
+export async function getUpcomingFollowUps(req, res) {
+    try {
+        const { ownerId, days } = req.query;
+        const followUps = await dealPipelineService.getUpcomingFollowUps({
+            ownerId,
+            days: days ? Number(days) : undefined,
+        });
+        return res.status(200).json({ success: true, data: followUps });
+    } catch (error) {
+        console.error("get upcoming follow ups failed", error);
+        return res.status(500).json({
+            success: false,
+            message: "failed to fetch upcoming follow ups",
+        });
+    }
+}
