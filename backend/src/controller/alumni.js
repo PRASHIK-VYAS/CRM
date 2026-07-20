@@ -287,7 +287,7 @@ export async function updateHelpPreferences(req, res) {
 
 export async function changeAlumniStatus(req, res) {
   try {
-    const alumni = await alumniService.changeStatus(
+    const alumni = await alumniService.changgiteStatus(
       req.params.id,
       req.body.status,
     );

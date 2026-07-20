@@ -1,8 +1,8 @@
-# EduBridge Enterprise — Low-Level Design (LLD) v1.0
+# EduBridge Enterprise — Low-Level Design (LLD) v2.0
 
 > **Owner**: TrailBlazers  
-> **Stack**: MySQL 8.0 | Express.js 4.18 | React 18 | Node.js 20  
-> **Audience**: Backend & Frontend Development Teams
+> **Stack**: PostgreSQL (via Supabase) | Express.js 5.x | Node.js 20 | Prisma ORM  
+> **Audience**: Backend Development Team
 
 ---
 
@@ -10,551 +10,279 @@
 
 1. [Database Schema](#1-database-schema)
 2. [API Endpoint Contract](#2-api-endpoint-contract)
-3. [Core Logic & Algorithms](#3-core-logic--algorithms)
-4. [Security & RBAC](#4-security--rbac)
-5. [Frontend–Backend Integration](#5-frontend-backend-integration)
+3. [Security & RBAC](#3-security--rbac)
+4. [Module Inventory](#4-module-inventory)
 
 ---
 
 ## 1. Database Schema
 
+The schema is managed via **Prisma ORM** against **PostgreSQL 15+** (hosted on Supabase). All models use either `Int` (autoincrement) or `String` (UUID v4) primary keys. Timestamps use `Timestamptz(6)`. Soft-delete is implemented via a nullable `deletedAt` column.
+
 ### 1.1 Entity Definitions
 
-#### `users`
+#### `User`
 
-Stores every actor in the system (Student, TPO, HOD, Recruiter, Super Admin). A single `role` discriminator drives RBAC.
+Stores system actors (Admin, TPO, Coordinator, HOD). The `role` enum drives access control.
 
 | Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | UUID v4 |
+|--------|------|-------------|-------------|
+| `id` | `Int` | `PK, autoincrement` | Surrogate key |
+| `name` | `VARCHAR(255)` | `NOT NULL` | Display name |
 | `email` | `VARCHAR(255)` | `UNIQUE, NOT NULL` | Login identifier |
-| `password_hash` | `CHAR(60)` | `NOT NULL` | bcrypt (cost 12) |
-| `role` | `ENUM('super_admin','tpo','hod','student','recruiter')` | `NOT NULL` | RBAC discriminator |
-| `full_name` | `VARCHAR(120)` | `NOT NULL` | Display name |
-| `phone` | `VARCHAR(20)` | | |
-| `avatar_url` | `VARCHAR(512)` | | CDN path |
-| `is_active` | `TINYINT(1)` | `NOT NULL, DEFAULT 1` | Soft-delete flag |
-| `last_login_at` | `TIMESTAMP` | | |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | |
+| `password` | `VARCHAR(255)` | `NOT NULL` | bcrypt hash |
+| `role` | `UserRole` enum | `NOT NULL, DEFAULT 'coordinator'` | `admin \| tpo \| coordinator \| hod` |
+| `resetToken` | `VARCHAR(255)` | | Password reset token |
+| `resetTokenExpiry` | `TIMESTAMPTZ(6)` | | Reset token expiry |
+| `otp` | `VARCHAR(255)` | | One-time password for reset |
+| `otpExpiry` | `TIMESTAMPTZ(6)` | | OTP expiry |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
 
-```sql
-CREATE TABLE users (
-    id BINARY(16) PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    password_hash CHAR(60) NOT NULL,
-    role ENUM('super_admin','tpo','hod','student','recruiter') NOT NULL,
-    full_name VARCHAR(120) NOT NULL,
-    phone VARCHAR(20),
-    avatar_url VARCHAR(512),
-    is_active TINYINT(1) NOT NULL DEFAULT 1,
-    last_login_at TIMESTAMP NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_users_role (role),
-    INDEX idx_users_email (email)
-);
-```
+**Relations:** `deals` → `DealPipeline[]`
 
-#### `student_profiles`
+**Map:** `Users`
 
-Extends `users` where `role = 'student'`. Holds academic and placement-specific metadata.
+---
+
+#### `Company360`
+
+Central repository for corporate entities tracked by the TPO cell. Includes CRM pipeline status, partnership levels, relationship stages, health scoring, and aggregated placement counters.
 
 | Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | UUID v4 |
-| `user_id` | `BINARY(16)` | `FK → users.id, UNIQUE, NOT NULL` | 1:1 with users |
-| `enrollment_no` | `VARCHAR(30)` | `UNIQUE, NOT NULL` | College roll number |
-| `department` | `VARCHAR(80)` | `NOT NULL` | e.g. Computer Science |
-| `batch_year` | `YEAR` | `NOT NULL` | Graduating year |
-| `cgpa` | `DECIMAL(3,2)` | | e.g. 8.50 |
-| `resume_url` | `VARCHAR(512)` | | CDN path |
-| `skills` | `JSON` | | Array of skill strings |
-| `project_tags` | `JSON` | | Extracted from portfolio |
-| `preferred_roles` | `JSON` | | Array of role strings |
-| `is_placed` | `TINYINT(1)` | `DEFAULT 0` | Placement flag |
-| `placed_at` | `TIMESTAMP` | | |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | |
-
-```sql
-CREATE TABLE student_profiles (
-    id BINARY(16) PRIMARY KEY,
-    user_id BINARY(16) NOT NULL UNIQUE,
-    enrollment_no VARCHAR(30) NOT NULL UNIQUE,
-    department VARCHAR(80) NOT NULL,
-    batch_year YEAR NOT NULL,
-    cgpa DECIMAL(3,2),
-    resume_url VARCHAR(512),
-    skills JSON,
-    project_tags JSON,
-    preferred_roles JSON,
-    is_placed TINYINT(1) DEFAULT 0,
-    placed_at TIMESTAMP NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_student_dept (department),
-    INDEX idx_student_batch (batch_year)
-);
-```
-
-#### `companies`
-
-Organizations that interact with the TPO cell.
-
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | UUID v4 |
-| `name` | `VARCHAR(180)` | `NOT NULL` | Legal name |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | `PK` | |
+| `companyCode` | `VARCHAR(20)` | `UNIQUE, NOT NULL` | Internal code |
+| `companyName` | `VARCHAR(255)` | `UNIQUE, NOT NULL` | Legal name |
+| `industry` | `CompanyIndustry` enum | `NOT NULL` | `IT \| Finance \| Healthcare \| Manufacturing \| Education \| Consulting \| Telecommunication \| E_Commerce \| Automobile \| Construction \| Other` |
 | `website` | `VARCHAR(255)` | | |
-| `industry` | `VARCHAR(80)` | | e.g. Fintech, EdTech |
-| `size_range` | `ENUM('1-10','11-50','51-200','201-1000','1000+')` | | |
-| `headquarters` | `VARCHAR(180)` | | City, Country |
-| `description` | `TEXT` | | |
-| `logo_url` | `VARCHAR(512)` | | |
-| `is_mou_signed` | `TINYINT(1)` | `DEFAULT 0` | |
-| `mou_signed_at` | `DATE` | | |
-| `mou_expires_at` | `DATE` | | |
-| `health_score` | `DECIMAL(5,2)` | `DEFAULT 0.00` | Computed — see §3.2 |
-| `status` | `ENUM('lead','active','inactive','blacklisted')` | `NOT NULL, DEFAULT 'lead'` | CRM pipeline stage |
-| `created_by` | `BINARY(16)` | `FK → users.id` | TPO who onboarded |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | |
-
-```sql
-CREATE TABLE companies (
-    id BINARY(16) PRIMARY KEY,
-    name VARCHAR(180) NOT NULL,
-    website VARCHAR(255),
-    industry VARCHAR(80),
-    size_range ENUM('1-10','11-50','51-200','201-1000','1000+'),
-    headquarters VARCHAR(180),
-    description TEXT,
-    logo_url VARCHAR(512),
-    is_mou_signed TINYINT(1) DEFAULT 0,
-    mou_signed_at DATE,
-    mou_expires_at DATE,
-    health_score DECIMAL(5,2) DEFAULT 0.00,
-    status ENUM('lead','active','inactive','blacklisted') NOT NULL DEFAULT 'lead',
-    created_by BINARY(16),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_company_status (status),
-    INDEX idx_company_industry (industry)
-);
-```
-
-#### `contacts`
-
-Individual people at a company (HR, Hiring Manager, etc.).
-
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | |
-| `company_id` | `BINARY(16)` | `FK → companies.id, NOT NULL` | |
-| `user_id` | `BINARY(16)` | `FK → users.id, UNIQUE` | Linked recruiter account |
-| `full_name` | `VARCHAR(120)` | `NOT NULL` | |
-| `designation` | `VARCHAR(100)` | | e.g. "Senior HR Manager" |
-| `email` | `VARCHAR(255)` | `NOT NULL` | |
+| `email` | `VARCHAR(255)` | | |
 | `phone` | `VARCHAR(20)` | | |
-| `is_primary` | `TINYINT(1)` | `DEFAULT 0` | Primary POC |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | |
-
-```sql
-CREATE TABLE contacts (
-    id BINARY(16) PRIMARY KEY,
-    company_id BINARY(16) NOT NULL,
-    user_id BINARY(16) UNIQUE,
-    full_name VARCHAR(120) NOT NULL,
-    designation VARCHAR(100),
-    email VARCHAR(255) NOT NULL,
-    phone VARCHAR(20),
-    is_primary TINYINT(1) DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_contact_company (company_id)
-);
-```
-
-#### `jobs`
-
-Placement drives posted by recruiters or TPOs.
-
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | |
-| `company_id` | `BINARY(16)` | `FK → companies.id, NOT NULL` | |
-| `posted_by` | `BINARY(16)` | `FK → users.id, NOT NULL` | TPO or Recruiter |
-| `title` | `VARCHAR(180)` | `NOT NULL` | e.g. "SDE-1 (2025 Batch)" |
-| `description` | `TEXT` | `NOT NULL` | Full JD |
-| `required_skills` | `JSON` | `NOT NULL` | Tags for matching engine |
-| `preferred_skills` | `JSON` | | |
-| `min_cgpa` | `DECIMAL(3,2)` | | Eligibility threshold |
-| `eligible_depts` | `JSON` | | Array of department strings |
-| `batch_year` | `YEAR` | `NOT NULL` | Target batch |
-| `location` | `VARCHAR(180)` | | |
-| `salary_range` | `VARCHAR(80)` | | e.g. "12-18 LPA" |
-| `positions` | `SMALLINT UNSIGNED` | `NOT NULL` | Openings count |
-| `status` | `ENUM('draft','open','closed','cancelled')` | `NOT NULL, DEFAULT 'draft'` | |
-| `deadline_at` | `TIMESTAMP` | | Application close |
-| `drive_date` | `DATE` | | On-campus drive date |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | |
-
-```sql
-CREATE TABLE jobs (
-    id BINARY(16) PRIMARY KEY,
-    company_id BINARY(16) NOT NULL,
-    posted_by BINARY(16) NOT NULL,
-    title VARCHAR(180) NOT NULL,
-    description TEXT NOT NULL,
-    required_skills JSON NOT NULL,
-    preferred_skills JSON,
-    min_cgpa DECIMAL(3,2),
-    eligible_depts JSON,
-    batch_year YEAR NOT NULL,
-    location VARCHAR(180),
-    salary_range VARCHAR(80),
-    positions SMALLINT UNSIGNED NOT NULL,
-    status ENUM('draft','open','closed','cancelled') NOT NULL DEFAULT 'draft',
-    deadline_at TIMESTAMP NULL,
-    drive_date DATE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-    FOREIGN KEY (posted_by) REFERENCES users(id),
-    INDEX idx_jobs_status (status),
-    INDEX idx_jobs_batch (batch_year),
-    INDEX idx_jobs_company (company_id)
-);
-```
-
-#### `applications`
-
-Each row is a student's application to a job.
-
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | |
-| `job_id` | `BINARY(16)` | `FK → jobs.id, NOT NULL` | |
-| `student_id` | `BINARY(16)` | `FK → student_profiles.id, NOT NULL` | |
-| `match_score` | `DECIMAL(5,2)` | | Computed by Matching Sieve |
-| `match_details` | `JSON` | | Breakdown of matched/missed tags |
-| `status` | `ENUM('applied','shortlisted','interviewed','offered','accepted','rejected','withdrawn')` | `NOT NULL, DEFAULT 'applied'` | |
-| `resume_version` | `VARCHAR(512)` | | Snapshot of resume at submission |
-| `submitted_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | |
-
-```sql
-CREATE TABLE applications (
-    id BINARY(16) PRIMARY KEY,
-    job_id BINARY(16) NOT NULL,
-    student_id BINARY(16) NOT NULL,
-    match_score DECIMAL(5,2),
-    match_details JSON,
-    status ENUM('applied','shortlisted','interviewed','offered','accepted','rejected','withdrawn') NOT NULL DEFAULT 'applied',
-    resume_version VARCHAR(512),
-    submitted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
-    FOREIGN KEY (student_id) REFERENCES student_profiles(id) ON DELETE CASCADE,
-    UNIQUE KEY uq_applications (job_id, student_id),
-    INDEX idx_app_status (status),
-    INDEX idx_app_student (student_id)
-);
-```
-
-#### `interactions`
-
-Every touch-point with a company or contact — emails, calls, meetings.
-
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | |
-| `company_id` | `BINARY(16)` | `FK → companies.id, NOT NULL` | |
-| `contact_id` | `BINARY(16)` | `FK → contacts.id` | |
-| `performed_by` | `BINARY(16)` | `FK → users.id, NOT NULL` | TPO who logged it |
-| `type` | `ENUM('email','call','meeting','visit','note','other')` | `NOT NULL` | |
-| `subject` | `VARCHAR(255)` | | |
-| `body` | `TEXT` | | |
-| `outcome` | `ENUM('positive','neutral','negative')` | | Sentiment tag |
-| `interacted_at` | `TIMESTAMP` | `NOT NULL` | When it happened |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-
-```sql
-CREATE TABLE interactions (
-    id BINARY(16) PRIMARY KEY,
-    company_id BINARY(16) NOT NULL,
-    contact_id BINARY(16),
-    performed_by BINARY(16) NOT NULL,
-    type ENUM('email','call','meeting','visit','note','other') NOT NULL,
-    subject VARCHAR(255),
-    body TEXT,
-    outcome ENUM('positive','neutral','negative'),
-    interacted_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-    FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL,
-    FOREIGN KEY (performed_by) REFERENCES users(id),
-    INDEX idx_interact_company (company_id),
-    INDEX idx_interact_date (interacted_at)
-);
-```
-
-#### `mous`
-
-Digital Memorandum of Understanding records.
-
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | |
-| `company_id` | `BINARY(16)` | `FK → companies.id, NOT NULL` | |
-| `signed_by_contact` | `BINARY(16)` | `FK → contacts.id` | Company signatory |
-| `signed_by_tpo` | `BINARY(16)` | `FK → users.id, NOT NULL` | TPO signatory |
-| `document_url` | `VARCHAR(512)` | `NOT NULL` | Signed PDF |
-| `signed_at` | `DATE` | `NOT NULL` | |
-| `expires_at` | `DATE` | `NOT NULL` | |
-| `terms_summary` | `JSON` | | e.g. {"min_offers":5,"exclusivity":false} |
-| `status` | `ENUM('active','expired','terminated')` | `NOT NULL, DEFAULT 'active'` | |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | |
-
-```sql
-CREATE TABLE mous (
-    id BINARY(16) PRIMARY KEY,
-    company_id BINARY(16) NOT NULL,
-    signed_by_contact BINARY(16),
-    signed_by_tpo BINARY(16) NOT NULL,
-    document_url VARCHAR(512) NOT NULL,
-    signed_at DATE NOT NULL,
-    expires_at DATE NOT NULL,
-    terms_summary JSON,
-    status ENUM('active','expired','terminated') NOT NULL DEFAULT 'active',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-    FOREIGN KEY (signed_by_contact) REFERENCES contacts(id) ON DELETE SET NULL,
-    FOREIGN KEY (signed_by_tpo) REFERENCES users(id),
-    INDEX idx_mou_company (company_id),
-    INDEX idx_mou_status (status)
-);
-```
-
-#### `alumni`
-
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | |
-| `user_id` | `BINARY(16)` | `FK → users.id, UNIQUE, NOT NULL` | Links to their student user |
-| `student_profile_id` | `BINARY(16)` | `FK → student_profiles.id, UNIQUE, NOT NULL` | |
-| `current_company` | `VARCHAR(180)` | | Employer name |
-| `current_designation` | `VARCHAR(100)` | | |
-| `current_location` | `VARCHAR(180)` | | |
-| `linkedin_url` | `VARCHAR(512)` | | |
-| `is_visible` | `TINYINT(1)` | `DEFAULT 1` | Opt-in for directory |
-| `is_verified` | `TINYINT(1)` | `DEFAULT 0` | TPO-verified |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | |
-
-```sql
-CREATE TABLE alumni (
-    id BINARY(16) PRIMARY KEY,
-    user_id BINARY(16) NOT NULL UNIQUE,
-    student_profile_id BINARY(16) NOT NULL UNIQUE,
-    current_company VARCHAR(180),
-    current_designation VARCHAR(100),
-    current_location VARCHAR(180),
-    linkedin_url VARCHAR(512),
-    is_visible TINYINT(1) DEFAULT 1,
-    is_verified TINYINT(1) DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (student_profile_id) REFERENCES student_profiles(id) ON DELETE CASCADE
-);
-```
-
-#### `portfolios`
-
-Student portfolio snapshots used by the Matching Sieve.
-
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | |
-| `student_id` | `BINARY(16)` | `FK → student_profiles.id, NOT NULL` | |
-| `title` | `VARCHAR(180)` | | Project / portfolio title |
+| `linkedin` | `VARCHAR(255)` | | LinkedIn URL |
+| `headOffice` | `VARCHAR(255)` | | HQ address |
+| `city` | `VARCHAR(255)` | | |
+| `country` | `VARCHAR(255)` | `DEFAULT 'India'` | |
+| `postalCode` | `VARCHAR(15)` | | |
+| `companySize` | `CompanySize` enum | | `1-50 \| 51-200 \| 201-500 \| 501-1000 \| 1000+` |
+| `foundedYear` | `Int` | | |
 | `description` | `TEXT` | | |
-| `tags` | `JSON` | | Auto-extracted keywords |
-| `url` | `VARCHAR(512)` | | GitHub / live link |
-| `type` | `ENUM('project','certification','publication','other')` | `DEFAULT 'project'` | |
-| `is_active` | `TINYINT(1)` | `DEFAULT 1` | |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
-| `updated_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP` | |
+| `status` | `CompanyStatus` enum | `DEFAULT 'PROSPECT'` | `ACTIVE \| INACTIVE \| PROSPECT \| BLACKLISTED` |
+| `partnershipLevel` | `PartnershipLevel` enum | `DEFAULT 'NONE'` | `NONE \| BASIC \| PREMIUM \| STRATEGIC` |
+| `relationshipStage` | `RelationshipStage` enum | `DEFAULT 'Cold_Lead'` | 10-stage pipeline from Cold Lead to Strategic Partner |
+| `healthScore` | `Int` | `DEFAULT 0` | Computed or manual score (0-100) |
+| `nextFollowUpDate` | `TIMESTAMPTZ(6)` | | Scheduled follow-up |
+| `totalPlacements` | `Int` | `DEFAULT 0` | Aggregate counter |
+| `totalOffers` | `Int` | `DEFAULT 0` | Aggregate counter |
+| `totalVisits` | `Int` | `DEFAULT 0` | Aggregate counter |
+| `totalMoUs` | `Int` | `DEFAULT 0` | Aggregate counter |
+| `createdBy` | `UUID` | | Actor who created |
+| `updatedBy` | `UUID` | | Actor who last updated |
+| `isActive` | `Boolean` | `DEFAULT true` | Active flag |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `deletedAt` | `TIMESTAMPTZ(6)` | | Soft-delete timestamp |
 
-```sql
-CREATE TABLE portfolios (
-    id BINARY(16) PRIMARY KEY,
-    student_id BINARY(16) NOT NULL,
-    title VARCHAR(180),
-    description TEXT,
-    tags JSON,
-    url VARCHAR(512),
-    type ENUM('project','certification','publication','other') DEFAULT 'project',
-    is_active TINYINT(1) DEFAULT 1,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (student_id) REFERENCES student_profiles(id) ON DELETE CASCADE,
-    INDEX idx_portfolio_student (student_id)
-);
-```
+**Relations:** `alumni[]`, `deals[]`, `mous[]`, `outreaches[]`, `employments[]`
 
-#### `feedback`
+**Indexes:** `city`, `healthScore`, `industry`, `nextFollowUpDate`, `partnershipLevel`, `relationshipStage`, `status`
 
-Recruiter feedback on candidates and the hiring process.
+**Map:** `company360`
 
-| Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | |
-| `application_id` | `BINARY(16)` | `FK → applications.id, NOT NULL` | |
-| `recruiter_id` | `BINARY(16)` | `FK → users.id, NOT NULL` | |
-| `round` | `VARCHAR(60)` | | e.g. "Technical Round 1" |
-| `rating` | `TINYINT UNSIGNED` | `CHECK (1-5)` | |
-| `comments` | `TEXT` | | |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
+---
 
-```sql
-CREATE TABLE feedback (
-    id BINARY(16) PRIMARY KEY,
-    application_id BINARY(16) NOT NULL,
-    recruiter_id BINARY(16) NOT NULL,
-    round VARCHAR(60),
-    rating TINYINT UNSIGNED CHECK (rating BETWEEN 1 AND 5),
-    comments TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE,
-    FOREIGN KEY (recruiter_id) REFERENCES users(id),
-    INDEX idx_feedback_app (application_id)
-);
-```
+#### `Alumni`
 
-#### `outreach_queue`
-
-Holds pending email tasks consumed by the async worker.
+Directory of graduated students mapped to their current employment. Supports influence scoring, skills tracking, and outreach targeting.
 
 | Column | Type | Constraints | Description |
-|---|---|---|---|
-| `id` | `BINARY(16)` | `PK` | |
-| `company_id` | `BINARY(16)` | `FK → companies.id` | |
-| `template_id` | `VARCHAR(80)` | | e.g. "welcome_lead" |
-| `recipients` | `JSON` | `NOT NULL` | Array of emails / contact IDs |
-| `subject` | `VARCHAR(255)` | `NOT NULL` | |
-| `body_html` | `TEXT` | `NOT NULL` | Rendered HTML |
-| `status` | `ENUM('pending','processing','sent','failed')` | `NOT NULL, DEFAULT 'pending'` | |
-| `error_log` | `TEXT` | | |
-| `scheduled_at` | `TIMESTAMP` | | |
-| `processed_at` | `TIMESTAMP` | | |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | `PK` | |
+| `alumniCode` | `VARCHAR(20)` | `UNIQUE, NOT NULL` | Internal alumni code |
+| `fullName` | `VARCHAR(255)` | `NOT NULL` | |
+| `email` | `VARCHAR(255)` | `UNIQUE, NOT NULL` | |
+| `phone` | `VARCHAR(20)` | | |
+| `department` | `VARCHAR(100)` | `NOT NULL` | Graduating department |
+| `batchYear` | `Int` | `NOT NULL` | Graduating year |
+| `currentDesignation` | `VARCHAR(150)` | `NOT NULL` | Current job title |
+| `seniorityLevel` | `AlumniSeniorityLevel` enum | `DEFAULT 'Entry_Level'` | `Entry_Level \| Mid_Level \| Senior_Level \| Lead \| Manager \| Director \| Founder \| HR \| Other` |
+| `companyId` | `UUID` | `FK → Company360.id` | Current employer |
+| `linkedin` | `VARCHAR(255)` | | LinkedIn profile URL |
+| `location` | `VARCHAR(255)` | | Current city |
+| `skills` | `JSON` | `DEFAULT '[]'` | Array of skill strings |
+| `willingnessToHelp` | `AlumniWillingnessToHelp` enum | `DEFAULT 'Maybe'` | `Yes \| No \| Maybe` |
+| `helpTypes` | `JSON` | `DEFAULT '[]'` | Types of help alumni can offer |
+| `influenceScore` | `Int` | `DEFAULT 0` | 0-100 influence metric |
+| `relationshipScore` | `Int` | `DEFAULT 0` | 0-100 relationship metric |
+| `lastContactedAt` | `TIMESTAMPTZ(6)` | | Last outreach timestamp |
+| `status` | `AlumniStatus` enum | `DEFAULT 'Active'` | `Active \| Inactive \| Not_Reachable` |
+| `notes` | `TEXT` | | Internal notes |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
 
-```sql
-CREATE TABLE outreach_queue (
-    id BINARY(16) PRIMARY KEY,
-    company_id BINARY(16),
-    template_id VARCHAR(80),
-    recipients JSON NOT NULL,
-    subject VARCHAR(255) NOT NULL,
-    body_html TEXT NOT NULL,
-    status ENUM('pending','processing','sent','failed') NOT NULL DEFAULT 'pending',
-    error_log TEXT,
-    scheduled_at TIMESTAMP NULL,
-    processed_at TIMESTAMP NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL,
-    INDEX idx_outreach_status (status),
-    INDEX idx_outreach_scheduled (scheduled_at)
-);
-```
+**Relations:** `company → Company360`, `employments → Employment[]`
 
-### 1.2 Junction Tables (N:N)
+**Indexes:** `companyId`
 
-#### `job_shortlists`
+**Map:** `alumni`
 
-TPO adds/reorders shortlisted students per job.
+---
+
+#### `DealPipeline`
+
+Tracks opportunities with companies through a multi-stage sales pipeline from cold lead to strategic partnership. Each deal is owned by a User and linked to a Company360 record.
 
 | Column | Type | Constraints | Description |
-|---|---|---|---|
-| `job_id` | `BINARY(16)` | `FK → jobs.id, NOT NULL` | |
-| `student_id` | `BINARY(16)` | `FK → student_profiles.id, NOT NULL` | |
-| `rank` | `SMALLINT UNSIGNED` | | TPO-assigned rank |
-| `added_by` | `BINARY(16)` | `FK → users.id` | |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | `PK` | |
+| `dealCode` | `VARCHAR(20)` | `UNIQUE, NOT NULL` | Internal deal code |
+| `companyId` | `UUID` | `FK → Company360.id, NOT NULL` | Target company |
+| `title` | `VARCHAR(255)` | `NOT NULL` | Deal title |
+| `ownerId` | `Int` | `FK → User.id, NOT NULL` | TPO/coordinator owning the deal |
+| `stage` | `DealStage` enum | `DEFAULT 'Cold_Lead'` | 13-stage pipeline |
+| `priority` | `DealPriority` enum | `DEFAULT 'Medium'` | `Low \| Medium \| High \| Critical` |
+| `probability` | `Int` | `DEFAULT 10` | Win probability % |
+| `expectedStudents` | `Int` | `DEFAULT 0` | Expected hire count |
+| `expectedCTC` | `DECIMAL(10,2)` | | Expected salary package |
+| `expectedHiringDate` | `DATE` | | Target hiring date |
+| `source` | `DealSource` enum | `DEFAULT 'Other'` | Lead source |
+| `leadOwner` | `VARCHAR(255)` | | External lead owner name |
+| `decisionMaker` | `VARCHAR(255)` | | Company decision maker |
+| `decisionMakerEmail` | `VARCHAR(255)` | | |
+| `decisionMakerPhone` | `VARCHAR(255)` | | |
+| `lastActivityDate` | `TIMESTAMPTZ(6)` | | Last activity timestamp |
+| `nextFollowUpDate` | `TIMESTAMPTZ(6)` | | Scheduled next action |
+| `nextAction` | `VARCHAR(255)` | | Description of next action |
+| `meetingDate` | `TIMESTAMPTZ(6)` | | Scheduled meeting |
+| `proposalSentDate` | `TIMESTAMPTZ(6)` | | Proposal sent date |
+| `mouExpectedDate` | `TIMESTAMPTZ(6)` | | Expected MoU signing |
+| `closeDate` | `TIMESTAMPTZ(6)` | | Deal close date |
+| `lostReason` | `TEXT` | | Reason if lost |
+| `competitorCollege` | `VARCHAR(255)` | | Competing institution |
+| `riskLevel` | `DealRiskLevel` enum | `DEFAULT 'Low'` | `Low \| Medium \| High` |
+| `remarks` | `TEXT` | | Internal remarks |
+| `isArchived` | `Boolean` | `DEFAULT false` | Archived flag |
+| `createdBy` | `UUID` | | |
+| `updatedBy` | `UUID` | | |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `deletedAt` | `TIMESTAMPTZ(6)` | | Soft-delete |
 
-```sql
-CREATE TABLE job_shortlists (
-    job_id BINARY(16) NOT NULL,
-    student_id BINARY(16) NOT NULL,
-    rank SMALLINT UNSIGNED,
-    added_by BINARY(16),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (job_id, student_id),
-    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
-    FOREIGN KEY (student_id) REFERENCES student_profiles(id) ON DELETE CASCADE,
-    FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE SET NULL
-);
-```
+**Relations:** `company → Company360`, `owner → User`
 
-#### `alumni_company_leads`
+**Indexes:** `companyId`, `expectedHiringDate`, `nextFollowUpDate`, `ownerId`, `priority`, `probability`, `stage`
 
-Maps alumni to companies they can introduce.
+**Map:** `deal_pipeline`
+
+---
+
+#### `MoU`
+
+Digital Memorandum of Understanding records tracking agreements between the institution and corporate partners.
 
 | Column | Type | Constraints | Description |
-|---|---|---|---|
-| `alumni_id` | `BINARY(16)` | `FK → alumni.id, NOT NULL` | |
-| `company_id` | `BINARY(16)` | `FK → companies.id, NOT NULL` | |
-| `relationship` | `ENUM('works_at','former_employee','board_member','referred')` | `NOT NULL` | |
-| `notes` | `TEXT` | | |
-| `created_at` | `TIMESTAMP` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | `PK` | |
+| `companyId` | `UUID` | `FK → Company360.id, NOT NULL` | Partner company |
+| `mouNumber` | `VARCHAR(50)` | `UNIQUE, NOT NULL` | Reference number |
+| `title` | `VARCHAR(255)` | `NOT NULL` | MoU title |
+| `purpose` | `TEXT` | | Description of purpose |
+| `startDate` | `DATE` | `NOT NULL` | Effective start |
+| `endDate` | `DATE` | `NOT NULL` | Expiry date |
+| `signedDate` | `DATE` | `NOT NULL` | Date signed |
+| `status` | `MoUStatus` enum | `DEFAULT 'DRAFT'` | `DRAFT \| PENDING \| ACTIVE \| EXPIRED \| TERMINATED \| RENEWED` |
+| `collaborationType` | `CollaborationType` enum | `NOT NULL` | `PLACEMENTS \| INTERNSHIPS \| TRAINING \| RESEARCH \| CONSULTANCY \| INDUSTRY_VISIT \| WORKSHOP \| MULTIPLE \| OTHER` |
+| `signedByCompany` | `VARCHAR(255)` | | Company signatory name |
+| `signedByInstitute` | `VARCHAR(255)` | | Institute signatory name |
+| `renewalReminderDays` | `Int` | `DEFAULT 30` | Days before expiry to trigger reminder |
+| `documentUrl` | `VARCHAR(255)` | | Link to signed PDF |
+| `remarks` | `TEXT` | | |
+| `createdBy` | `UUID` | | |
+| `updatedBy` | `UUID` | | |
+| `isActive` | `Boolean` | `DEFAULT true` | |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `deletedAt` | `TIMESTAMPTZ(6)` | | Soft-delete |
 
-```sql
-CREATE TABLE alumni_company_leads (
-    alumni_id BINARY(16) NOT NULL,
-    company_id BINARY(16) NOT NULL,
-    relationship ENUM('works_at','former_employee','board_member','referred') NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (alumni_id, company_id),
-    FOREIGN KEY (alumni_id) REFERENCES alumni(id) ON DELETE CASCADE,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
-);
-```
+**Relations:** `company → Company360`
 
-### 1.3 Entity Relationship Diagram (ERD)
+**Indexes:** `collaborationType`, `companyId`, `endDate`, `status`
+
+**Map:** `mous`
+
+---
+
+#### `Outreach`
+
+Logs every touchpoint with a company — emails, calls, meetings, visits, and other interactions. Functions as an interaction history log (not a queued email system in V1).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | `PK` | |
+| `companyId` | `UUID` | `FK → Company360.id, NOT NULL` | Target company |
+| `outreachType` | `OutreachType` enum | `NOT NULL` | `EMAIL \| PHONE_CALL \| MEETING \| LINKEDIN \| VISIT \| EVENT \| PLACEMENT_DRIVE \| INTERNSHIP \| MOU_DISCUSSION \| FOLLOW_UP \| OTHER` |
+| `subject` | `VARCHAR(255)` | `NOT NULL` | Subject line |
+| `description` | `TEXT` | | Body / notes |
+| `interactionDate` | `TIMESTAMPTZ(6)` | `NOT NULL` | When the interaction occurred |
+| `outcome` | `OutreachOutcome` enum | `DEFAULT 'NEUTRAL'` | `POSITIVE \| NEUTRAL \| NEGATIVE \| NO_RESPONSE \| FOLLOW_UP_REQUIRED` |
+| `status` | `OutreachStatus` enum | `DEFAULT 'PLANNED'` | `PLANNED \| COMPLETED \| CANCELLED \| MISSED` |
+| `nextFollowUpDate` | `TIMESTAMPTZ(6)` | | Scheduled next outreach |
+| `notes` | `TIMESTAMPTZ(6)` | | Free-form notes |
+| `createdBy` | `UUID` | `NOT NULL` | |
+| `updatedBy` | `UUID` | | |
+| `isActive` | `Boolean` | `DEFAULT true` | |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `deletedAt` | `TIMESTAMPTZ(6)` | | Soft-delete |
+
+**Relations:** `company → Company360`
+
+**Indexes:** `companyId`, `interactionDate`, `nextFollowUpDate`, `outcome`, `status`
+
+**Map:** `outreaches`
+
+---
+
+#### `Employment`
+
+Tracks alumni employment history — current and past positions at companies.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | `PK` | |
+| `alumniId` | `UUID` | `FK → Alumni.id, NOT NULL` | Alumni record |
+| `companyId` | `UUID` | `FK → Company360.id, NOT NULL` | Employer |
+| `designation` | `VARCHAR(255)` | `NOT NULL` | Job title |
+| `department` | `VARCHAR(100)` | | Department |
+| `startDate` | `DATE` | `NOT NULL` | Start date |
+| `endDate` | `DATE` | | End date (null if current) |
+| `isCurrent` | `Boolean` | `DEFAULT true` | Currently employed here |
+| `employmentType` | `EmploymentType` enum | `DEFAULT 'FULL_TIME'` | `FULL_TIME \| PART_TIME \| CONTRACT \| INTERNSHIP` |
+| `workMode` | `WorkMode` enum | `DEFAULT 'ON_SITE'` | `ON_SITE \| REMOTE \| HYBRID` |
+| `location` | `VARCHAR(255)` | | Work location |
+| `description` | `TEXT` | | Role description |
+| `remarks` | `TEXT` | | |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+
+**Relations:** `alumni → Alumni`, `company → Company360`
+
+**Indexes:** `alumniId`, `companyId`, `(alumniId, isCurrent)`, `(companyId, isCurrent)`
+
+**Map:** `employment`
+
+---
+
+### 1.2 Entity Relationship Diagram
 
 ```mermaid
 erDiagram
-    users ||--o| student_profiles : extends
-    users ||--o| alumni : extends
-    student_profiles ||--o| portfolios : owns
-    student_profiles ||--o{ applications : submits
-    applications }o--|| jobs : targets
-    jobs }o--|| companies : belongs_to
-    companies ||--o{ contacts : has
-    companies ||--o{ interactions : logs
-    companies ||--o{ mous : signs
-    companies ||--o{ outreach_queue : queued
-    contacts ||--o{ interactions : participates
-    users ||--o{ interactions : performs
-    users ||--o{ feedback : writes
-    applications ||--o{ feedback : receives
-    job_shortlists }o--|| jobs : contains
-    job_shortlists }o--|| student_profiles : ranks
-    alumni ||--o{ alumni_company_leads : connects
-    alumni_company_leads }o--|| companies : targets
-    users ||--o{ companies : onboarded_by
+    User ||--o{ DealPipeline : owns
+    Company360 ||--o{ Alumni : employs
+    Company360 ||--o{ DealPipeline : targets
+    Company360 ||--o{ MoU : signs
+    Company360 ||--o{ Outreach : logs
+    Company360 ||--o{ Employment : hosts
+    Alumni ||--o{ Employment : has
 ```
 
 ---
@@ -563,676 +291,261 @@ erDiagram
 
 ### 2.1 Standardised Response Envelope
 
-Every endpoint returns:
+All API responses follow a consistent JSON envelope:
 
 ```json
 {
     "success": true,
     "data": { ... },
-    "meta": {
+    "pagination": {
         "page": 1,
-        "per_page": 20,
-        "total": 142
+        "limit": 20,
+        "total": 142,
+        "totalPages": 8
     },
-    "error": null
+    "message": null
 }
 ```
 
-On failure:
+On error:
 
 ```json
 {
     "success": false,
     "data": null,
-    "meta": null,
-    "error": {
-        "code": "COMPANY_NOT_FOUND",
-        "message": "No company exists with the given ID.",
-        "details": { "company_id": "abc-123" }
-    }
+    "message": "Human-readable error description"
 }
 ```
 
-HTTP status codes: `200` (success), `201` (created), `400` (validation), `401` (unauthenticated), `403` (forbidden), `404` (not found), `409` (conflict), `422` (unprocessable), `429` (rate-limited), `500` (internal).
-
-### 2.2 Module: Authentication
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/auth/login` | `{ "email", "password" }` | `201` → `{ "access_token", "refresh_token", "user" }` | `400` validation, `401` invalid credentials |
-| `POST` | `/api/auth/register` | `{ "email", "password", "full_name", "role" }` | `201` → `{ "user" }` | `400` validation, `409` email exists |
-| `POST` | `/api/auth/refresh` | `{ "refresh_token" }` | `200` → `{ "access_token", "refresh_token" }` | `401` invalid/expired refresh |
-| `POST` | `/api/auth/logout` | — | `200` → `{ "message" }` | `401` |
-| `POST` | `/api/auth/forgot-password` | `{ "email" }` | `200` → `{ "message" }` | `404` email not found |
-| `POST` | `/api/auth/reset-password` | `{ "token", "password" }` | `200` → `{ "message" }` | `400` invalid/expired token |
-
-### 2.3 Module: Users
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `GET` | `/api/users/me` | — | `200` → `{ "user" }` | `401` |
-| `PUT` | `/api/users/me` | `{ "full_name", "phone", "avatar_url" }` | `200` → `{ "user" }` | `400`, `401` |
-| `GET` | `/api/users` | Query: `?role=tpo&page=1&per_page=20` | `200` → `{ "users": [...], "meta" }` | `401`, `403` |
-| `GET` | `/api/users/:id` | — | `200` → `{ "user" }` | `401`, `403`, `404` |
-| `PUT` | `/api/users/:id/status` | `{ "is_active": false }` | `200` → `{ "user" }` | `401`, `403`, `404` |
-
-### 2.4 Module: Companies
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/companies` | `{ "name", "website", "industry", "description" }` | `201` → `{ "company" }` | `400`, `401` |
-| `GET` | `/api/companies` | Query: `?status=active&industry=Fintech&page=1` | `200` → `{ "companies": [...], "meta" }` | `401` |
-| `GET` | `/api/companies/:id` | — | `200` → `{ "company" }` | `401`, `404` |
-| `PUT` | `/api/companies/:id` | `{ "name", "status", "industry" }` | `200` → `{ "company" }` | `400`, `401`, `403`, `404` |
-| `DELETE` | `/api/companies/:id` | — | `200` → `{ "message" }` | `401`, `403`, `404` |
-| `GET` | `/api/companies/:id/health` | — | `200` → `{ "health_score", "breakdown" }` | `401`, `404` |
-
-### 2.5 Module: Contacts
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/companies/:companyId/contacts` | `{ "full_name", "email", "designation", "is_primary" }` | `201` → `{ "contact" }` | `400`, `401`, `404` |
-| `GET` | `/api/companies/:companyId/contacts` | — | `200` → `{ "contacts": [...] }` | `401`, `404` |
-| `PUT` | `/api/companies/:companyId/contacts/:id` | `{ "full_name", "designation" }` | `200` → `{ "contact" }` | `400`, `401`, `403`, `404` |
-| `DELETE` | `/api/companies/:companyId/contacts/:id` | — | `200` → `{ "message" }` | `401`, `403`, `404` |
-
-### 2.6 Module: Jobs
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/jobs` | `{ "company_id", "title", "description", "required_skills", "min_cgpa", "eligible_depts", "batch_year", "positions", "deadline_at", "drive_date" }` | `201` → `{ "job" }` | `400`, `401`, `403` |
-| `GET` | `/api/jobs` | Query: `?status=open&batch_year=2025&company_id=x` | `200` → `{ "jobs": [...], "meta" }` | `401` |
-| `GET` | `/api/jobs/:id` | — | `200` → `{ "job" }` | `401`, `404` |
-| `PUT` | `/api/jobs/:id` | `{ "title", "status", "positions" }` | `200` → `{ "job" }` | `400`, `401`, `403`, `404` |
-| `DELETE` | `/api/jobs/:id` | — | `200` → `{ "message" }` | `401`, `403`, `404` |
-| `POST` | `/api/jobs/:id/publish` | — | `200` → `{ "job" }` | `401`, `403`, `404` |
-| `POST` | `/api/jobs/:id/close` | — | `200` → `{ "job" }` | `401`, `403`, `404` |
-
-### 2.7 Module: Applications
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/jobs/:jobId/apply` | — | `201` → `{ "application", "match_score" }` | `400` (duplicate), `401`, `403`, `404` |
-| `GET` | `/api/jobs/:jobId/applications` | Query: `?status=shortlisted&sort=match_score` | `200` → `{ "applications": [...], "meta" }` | `401`, `403`, `404` |
-| `GET` | `/api/applications/:id` | — | `200` → `{ "application" }` | `401`, `404` |
-| `PUT` | `/api/applications/:id/status` | `{ "status": "shortlisted" }` | `200` → `{ "application" }` | `400`, `401`, `403`, `404` |
-| `GET` | `/api/students/me/applications` | — | `200` → `{ "applications": [...], "meta" }` | `401` |
-
-### 2.8 Module: Matching (MLS — Matching Logic Service)
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/matching/score/:studentId/:jobId` | — | `200` → `{ "match_score", "breakdown" }` | `401`, `404` |
-| `POST` | `/api/matching/batch/:jobId` | — | `202` → `{ "message", "queue_id" }` | `401`, `403`, `404` |
-| `GET` | `/api/matching/shortlist/:jobId` | Query: `?min_score=70&limit=30` | `200` → `{ "shortlist": [...], "meta" }` | `401`, `403`, `404` |
-
-### 2.9 Module: Interactions
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/companies/:companyId/interactions` | `{ "type", "subject", "body", "outcome", "contact_id", "interacted_at" }` | `201` → `{ "interaction" }` | `400`, `401`, `404` |
-| `GET` | `/api/companies/:companyId/interactions` | Query: `?type=meeting&from=2025-01-01` | `200` → `{ "interactions": [...], "meta" }` | `401`, `404` |
-
-### 2.10 Module: MoUs
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/companies/:companyId/mous` | `{ "document_url", "signed_at", "expires_at", "terms_summary", "signed_by_contact" }` | `201` → `{ "mou" }` | `400`, `401`, `403`, `404` |
-| `GET` | `/api/companies/:companyId/mous` | — | `200` → `{ "mous": [...] }` | `401`, `404` |
-| `PUT` | `/api/companies/:companyId/mous/:id` | `{ "status": "terminated" }` | `200` → `{ "mou" }` | `400`, `401`, `403`, `404` |
-
-### 2.11 Module: Alumni
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/alumni` | `{ "user_id", "current_company", "current_designation" }` | `201` → `{ "alumni" }` | `400`, `401`, `403`, `409` |
-| `GET` | `/api/alumni` | Query: `?current_company=x&is_verified=1&page=1` | `200` → `{ "alumni": [...], "meta" }` | `401` |
-| `GET` | `/api/alumni/:id` | — | `200` → `{ "alumni" }` | `401`, `404` |
-| `PUT` | `/api/alumni/:id` | `{ "current_company", "current_designation", "is_visible" }` | `200` → `{ "alumni" }` | `400`, `401`, `403`, `404` |
-
-### 2.12 Module: Portfolios
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/portfolios` | `{ "title", "description", "tags", "url", "type" }` | `201` → `{ "portfolio" }` | `400`, `401` |
-| `GET` | `/api/students/:studentId/portfolios` | — | `200` → `{ "portfolios": [...] }` | `401`, `404` |
-| `PUT` | `/api/portfolios/:id` | `{ "title", "tags", "is_active" }` | `200` → `{ "portfolio" }` | `400`, `401`, `403`, `404` |
-| `DELETE` | `/api/portfolios/:id` | — | `200` → `{ "message" }` | `401`, `403`, `404` |
-
-### 2.13 Module: Outreach
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/outreach/send` | `{ "company_id", "template_id", "recipients", "subject", "body_html", "scheduled_at" }` | `202` → `{ "queue_id" }` | `400`, `401`, `403` |
-| `GET` | `/api/outreach/queue` | Query: `?status=pending` | `200` → `{ "queue": [...], "meta" }` | `401`, `403` |
-| `POST` | `/api/outreach/queue/:id/cancel` | — | `200` → `{ "message" }` | `401`, `403`, `404` |
-
-### 2.14 Module: Health Score (on-demand)
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/health/recalculate/:companyId` | — | `202` → `{ "message" }` | `401`, `403`, `404` |
-| `GET` | `/api/health/breakdown/:companyId` | — | `200` → `{ "score", "components" }` | `401`, `404` |
-
-### 2.15 Module: Feedback
-
-| Method | Endpoint | Request Body | Success Response | Errors |
-|---|---|---|---|---|
-| `POST` | `/api/applications/:applicationId/feedback` | `{ "recruiter_id", "round", "rating", "comments" }` | `201` → `{ "feedback" }` | `400`, `401`, `403`, `404` |
-| `GET` | `/api/applications/:applicationId/feedback` | — | `200` → `{ "feedback_list": [...] }` | `401`, `404` |
+HTTP status codes: `200` (success), `201` (created), `400` (validation), `401` (unauthenticated), `403` (forbidden), `404` (not found), `409` (conflict), `500` (internal).
 
 ---
 
-## 3. Core Logic & Algorithms
+### 2.2 Mounted Modules (active in server.js)
 
-### 3.1 The Matching Sieve (Rule-Based Matching Engine)
+#### Module: Auth
 
-The engine compares a job's required/preferred skill tags against a student's `skills`, `project_tags`, and `preferred_roles`. It produces a weighted score from 0.00–100.00.
+Base path: `/auth`
 
-```
-FUNCTION compute_match_score(student, job):
-    required   = job.required_skills    // JSON array of strings
-    preferred  = job.preferred_skills   // JSON array of strings
-    student_skills = student.skills     // JSON array
-    project_tags   = student.project_tags
-    roles          = student.preferred_roles
+| Method | Endpoint | Auth | Request Body | Success Response | Notes |
+|--------|----------|------|-------------|------------------|-------|
+| `GET` | `/` | No | — | `{ message }` | Server health |
+| `GET` | `/health` | No | — | `{ status }` | Health check |
+| `POST` | `/login` | No | `{ email, password }` | `{ token, user }` | Returns JWT |
+| `POST` | `/forgot-password` | No | `{ email }` | `{ message }` | Sends OTP via email |
+| `POST` | `/create_user` | Yes (admin) | `{ name, email, password, role }` | `{ message, user }` | Admin-only |
+| `POST` | `/verify-otp` | No | `{ email, otp }` | `{ token }` | Returns short-lived reset token |
+| `POST` | `/reset-password` | No (Bearer reset token) | `{ newPassword }` | `{ message }` | Requires reset JWT in header |
 
-    // ── Weight configuration ──
-    W_REQUIRED = 50    // max points for covering all required skills
-    W_PREFERRED = 20   // max points for preferred skills
-    W_PROJECT = 15     // project tag overlap
-    W_ROLE = 10        // role alignment
-    W_CGPA = 5         // CGPA threshold bonus
+#### Module: Analytics
 
-    // ── 1. Required Skills Match ──
-    required_normalised = NORMALISE_TAGS(required)
-    student_normalised  = NORMALISE_TAGS(student_skills ∪ project_tags)
+Base path: `/analytics`
 
-    required_hit = COUNT_MATCHES(required_normalised, student_normalised)
-    required_score = (required_hit / LEN(required_normalised)) × W_REQUIRED
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/dashboard` | No | Returns aggregate counts for companies (total/active/prospect/inactive), MoUs, outreaches, health score average, industry breakdown, status breakdown |
 
-    // ── 2. Preferred Skills Bonus ──
-    preferred_hit = COUNT_MATCHES(NORMALISE_TAGS(preferred), student_normalised)
-    preferred_score = (preferred_hit / MAX(LEN(preferred), 1)) × W_PREFERRED
+#### Module: Company360
 
-    // ── 3. Project Tag Overlap ──
-    project_hit = COUNT_MATCHES(NORMALISE_TAGS(project_tags), NORMALISE_TAGS(required))
-    project_score = (project_hit / MAX(LEN(required), 1)) × W_PROJECT
+Base path: `/api/company360`
 
-    // ── 4. Role Alignment ──
-    role_match_found = FALSE
-    FOR EACH role IN roles:
-        IF CONTAINS(job.title, role) OR CONTAINS(job.description, role):
-            role_match_found = TRUE
-            BREAK
-    role_score = role_match_found ? W_ROLE : 0
-
-    // ── 5. CGPA Threshold ──
-    cgpa_score = 0
-    IF job.min_cgpa IS NOT NULL AND student.cgpa IS NOT NULL:
-        IF student.cgpa >= job.min_cgpa:
-            cgpa_score = W_CGPA
-        ELSE:
-            cgpa_score = (student.cgpa / job.min_cgpa) × W_CGPA × 0.5  // partial penalty
-
-    // ── Final Score ──
-    total = required_score + preferred_score + project_score + role_score + cgpa_score
-    total = CLAMP(total, 0.00, 100.00)
-
-    breakdown = {
-        "required": ROUND(required_score, 2),
-        "preferred": ROUND(preferred_score, 2),
-        "project_overlap": ROUND(project_score, 2),
-        "role_alignment": ROUND(role_score, 2),
-        "cgpa": ROUND(cgpa_score, 2),
-        "total": ROUND(total, 2)
-    }
-
-    RETURN breakdown
-END_FUNCTION
-
-// Helper: NORMALISE_TAGS converts all tags to lowercase, trims whitespace,
-// and removes duplicates.
-FUNCTION NORMALISE_TAGS(tags):
-    normalised = NEW SET
-    FOR EACH tag IN tags:
-        normalised.add(TRIM(LOWERCASE(tag)))
-    RETURN normalised
-END_FUNCTION
-
-// Helper: COUNT_MATCHES returns size of set intersection.
-FUNCTION COUNT_MATCHES(set_a, set_b):
-    RETURN SIZE(set_a ∩ set_b)
-END_FUNCTION
-```
-
-**Batch processing:** `POST /api/matching/batch/:jobId` enqueues a BullMQ job. The worker processes students in chunks of 50, writing `match_score` and `match_details` to the `applications` table. This keeps the API responsive for jobs with 500+ applicants.
-
-### 3.2 Health Score Calculation
-
-The `CompanyHealthScore` is a weighted composite metric computed from three dimensions.
-
-```
-DIMENSION 1 — Engagement (40 pts)
-   Indicators:
-     - interaction_count: number of interactions in last 12 months
-     - interaction_recency: days since last interaction
-     - interaction_variety: distinct interaction types used
-
-   score_engagement = MIN((
-         (interaction_count / 12) × 15
-       + (MAX(0, 365 - interaction_recency) / 365) × 15
-       + (interaction_variety / 4) × 10
-   ), 40)
-
-DIMENSION 2 — Placement History (35 pts)
-   Indicators:
-     - placement_ratio: offers_accepted / positions_offered (last 3 years)
-     - consistency: number of consecutive years the company recruited
-     - avg_offer_quality: average CTC relative to batch median
-
-   score_placement = MIN((
-         placement_ratio × 15
-       + (consistency / 3) × 10
-       + MIN(avg_offer_quality / batch_median_ctc, 2) × 10
-   ), 35)
-
-DIMENSION 3 — MoU & Partnership (25 pts)
-   Indicators:
-     - mou_status: active → 10, expired → 5, none → 0
-     - mou_tenure_remaining: months until expiry (capped at 24)
-     - terms_fulfilled: percentage of MoU commitments met
-
-   score_mou = MIN((
-         mou_status_score
-       + (mou_tenure_remaining / 24) × 8
-       + terms_fulfilled × 7
-   ), 25)
-
-FINAL: health_score = score_engagement + score_placement + score_mou
-RANGE: 0.00 – 100.00
-```
-
-**Recalculation triggers:**
-- On every new interaction (async — debounced by 5 minutes via Redis).
-- On every application status change to `accepted`.
-- On MoU create/update/expire.
-- Scheduled cron: runs nightly at 02:00 for all companies with `status = 'active'`.
-
-### 3.3 Outreach Queue (Bulk Email System)
-
-The outreach engine must never block the HTTP request thread. Architecture:
-
-```
-┌─────────────┐     ┌──────────────┐     ┌────────────┐     ┌──────────┐
-│  Client      │ ──> │  Express      │ ──> │  BullMQ     │ ──> │  Worker  │
-│  POST /send  │     │  (validate    │     │  (Redis)    │     │  (batch) │
-│              │     │   + enqueue)  │     │             │     │          │
-└─────────────┘     └──────────────┘     └────────────┘     └──────────┘
-                                                                    │
-                                                           ┌────────┴────────┐
-                                                           │  Nodemailer     │
-                                                           │  (SMTP pool)    │
-                                                           └─────────────────┘
-```
-
-**Pseudocode:**
-
-```
-FUNCTION handle_outreach_send(req, res):
-    VALIDATE req.body (schema: company_id, template_id, recipients, subject, body_html)
-    INSERT INTO outreach_queue (company_id, template_id, recipients, subject, body_html, status='pending')
-    ENQUEUE BullMQ job with:
-        name: 'send_email'
-        data: { queue_row_id }
-        opts: { attempts: 3, backoff: { type: 'exponential', delay: 5000 } }
-    RETURN 202 { queue_id: new_row.id }
-END_FUNCTION
-
-// Worker (runs in separate process)
-FUNCTION process_email_job(job):
-    row = SELECT * FROM outreach_queue WHERE id = job.data.queue_row_id
-    IF row.status IN ('sent', 'cancelled'):
-        RETURN  // idempotency guard
-
-    UPDATE outreach_queue SET status = 'processing' WHERE id = row.id
-
-    transporter = NODEMAILER_CREATE_POOL({
-        pool: true,
-        maxConnections: 5,
-        rateLimit: 30  // max 30 emails per second
-    })
-
-    batch = PARSE_JSON(row.recipients)  // array of email strings
-    failed = []
-
-    FOR EACH email IN batch:
-        TRY:
-            await transporter.sendMail({
-                from: 'noreply@edubridge.edu',
-                to: email,
-                subject: row.subject,
-                html: row.body_html
-            })
-        CATCH err:
-            failed.push({ email, error: err.message })
-
-        DELAY(33ms)  // ~30 emails/sec throttle
-
-    status = failed.length === batch.length ? 'failed' : 'sent'
-    error_log = failed.length > 0 ? JSON.stringify(failed) : NULL
-
-    UPDATE outreach_queue
-    SET status = status, error_log = error_log, processed_at = NOW()
-    WHERE id = row.id
-END_FUNCTION
-```
-
-**Key guarantees:**
-- **Pooled SMTP** with `maxConnections: 5` prevents socket starvation.
-- **Rate limit** of 30 emails/second per worker stays under SMTP provider quotas (SendGrid 100/s, SES 50/s).
-- **Backoff & retry** with 3 attempts; dead-letter after final failure.
-- **Idempotency** via status check before processing.
+| Method | Endpoint | Auth | Request / Query | Description |
+|--------|----------|------|----------------|-------------|
+| `POST` | `/` | No | `{ companyName, industry, ... }` | Create new company |
+| `GET` | `/` | No | `?page, limit, search, industry, status, city, sortBy, sortOrder, includeDeleted` | List companies (paginated, filterable) |
+| `GET` | `/:id` | No | `?includeDeleted` | Get company by ID |
+| `GET` | `/:id/details` | No | — | Get company with relations |
+| `GET` | `/:id/statistics` | No | — | Get aggregated stats |
+| `PUT` | `/:id` | No | `{ companyName, industry, ... }` | Update company |
+| `DELETE` | `/:id/restore` | No | — | Restore soft-deleted company |
+| `DELETE` | `/:id/permanently-delete` | No | — | Hard delete |
 
 ---
 
-## 4. Security & RBAC Implementation
+### 2.3 Unmounted Modules (controllers exist, not wired in server.js)
 
-### 4.1 JWT Middleware Flow
+The following controllers implement full CRUD but are **not yet mounted** in `server.js`. Their endpoints are specified below for reference — they become active once their route file is imported and registered.
 
-```
-┌──────────┐       ┌──────────────┐       ┌────────────┐
-│  Client   │       │  Middleware   │       │  Controller │
-│  (Bearer  │       │  authenticate │       │             │
-│   token)  │       │              │       │             │
-└────┬─────┘       └──────┬───────┘       └──────┬──────┘
-     │  Authorization:    │                       │
-     │  Bearer <token>    │                       │
-     │──────────────────>│                       │
-     │                   │                        │
-     │                   │ 1. Extract token from  │
-     │                   │    header              │
-     │                   │ 2. Verify with         │
-     │                   │    jwt.verify(token,   │
-     │                   │    ACCESS_SECRET)      │
-     │                   │                        │
-     │                   │ 3. Decode payload:     │
-     │                   │    { sub: user_id,     │
-     │                   │      role: 'tpo',      │
-     │                   │      iat, exp }        │
-     │                   │                        │
-     │                   │ 4. Load user from DB:  │
-     │                   │    SELECT id, role,    │
-     │                   │    is_active FROM users │
-     │                   │    WHERE id = sub      │
-     │                   │                        │
-     │                   │ 5. If !is_active →     │
-     │                   │    throw 401           │
-     │                   │                        │
-     │                   │ 6. Attach req.user = { │
-     │                   │      id, role, email   │
-     │                   │    }                   │
-     │                   │                        │
-     │                   │ 7. Call next()         │
-     │                   │ ──────────────────────>│
-     │                   │                        │
-     │                 [ROLE GATE]                │
-     │                   │                        │
-     │                   │ requireRole('tpo',     │
-     │                   │   'super_admin')       │
-     │                   │ ──────────────────────>│
-     │                   │                        │
-     │                   │   8. If role not in    │
-     │                   │      allowed → 403     │
-     │                   │                        │
-     │                   │ 9. Controller executes │
-     │                   │    business logic      │
-```
+#### Module: Alumni (controller: `alumni.js`)
 
-**Access Token:** 15-minute expiry, signed with `ACCESS_TOKEN_SECRET`.  
-**Refresh Token:** 7-day expiry, signed with `REFRESH_TOKEN_SECRET`, stored as HTTP-only cookie (`SameSite=Strict`, `Secure` in production). Rotation: old refresh token is invalidated on each refresh.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/alumni` | Create alumni |
+| `GET` | `/api/alumni` | List alumni (paginated, filterable) |
+| `GET` | `/api/alumni/:id` | Get by ID |
+| `GET` | `/api/alumni/code/:alumniCode` | Get by alumni code |
+| `GET` | `/api/alumni/email/:email` | Get by email |
+| `GET` | `/api/alumni/company/:companyId` | Get by company |
+| `PUT` | `/api/alumni/:id` | Update alumni |
+| `PUT` | `/api/alumni/:id/assign-company` | Assign to company |
+| `DELETE` | `/api/alumni/:id/remove-company` | Remove company assignment |
+| `PUT` | `/api/alumni/:id/scores` | Update influence/relationship scores |
+| `POST` | `/api/alumni/:id/contact` | Record contact |
+| `POST` | `/api/alumni/:id/skills` | Add skills |
+| `DELETE` | `/api/alumni/:id/skills` | Remove skill |
+| `PUT` | `/api/alumni/:id/help-preferences` | Update willingness to help |
+| `PUT` | `/api/alumni/:id/status` | Change status |
+| `PUT` | `/api/alumni/:id/activate` | Activate |
+| `PUT` | `/api/alumni/:id/deactivate` | Deactivate |
+| `DELETE` | `/api/alumni/:id` | Permanently delete |
+| `GET` | `/api/alumni/statistics` | Get aggregate statistics |
 
-### 4.2 Permission Matrix
+#### Module: MoU (controller: `mouvoult.js`)
 
-| Operation | Super Admin | TPO | HOD | Student | Recruiter |
-|---|---|---|---|---|---|
-| **Users** | | | | | |
-| List all users | ✓ | ✓ (TPOs, Students) | ✗ | ✗ | ✗ |
-| View own profile | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Deactivate user | ✓ | ✗ | ✗ | ✗ | ✗ |
-| **Companies** | | | | | |
-| Create company | ✓ | ✓ | ✗ | ✗ | ✗ |
-| View company | ✓ | ✓ | ✓ | ✓ | ✓ (own) |
-| Edit company | ✓ | ✓ | ✗ | ✗ | ✗ |
-| Delete company | ✓ | ✗ | ✗ | ✗ | ✗ |
-| View health score | ✓ | ✓ | ✓ | ✗ | ✗ |
-| **Jobs** | | | | | |
-| Create job | ✓ | ✓ (publish) | ✗ | ✗ | ✓ (draft) |
-| View job | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Edit job | ✓ | ✓ (own) | ✗ | ✗ | ✓ (own draft) |
-| Delete job | ✓ | ✓ (own) | ✗ | ✗ | ✗ |
-| Close/publish job | ✓ | ✓ | ✗ | ✗ | ✗ |
-| **Applications** | | | | | |
-| View all applications | ✓ | ✓ | ✓ (stats) | ✓ (own) | ✓ (own job) |
-| Update status | ✓ | ✓ | ✗ | ✗ | ✓ (shortlist) |
-| **MoUs** | | | | | |
-| Create MoU | ✓ | ✓ | ✗ | ✗ | ✗ |
-| View MoU | ✓ | ✓ | ✓ | ✗ | ✓ (own) |
-| Terminate MoU | ✓ | ✗ | ✗ | ✗ | ✗ |
-| **Interactions** | | | | | |
-| Log interaction | ✓ | ✓ | ✗ | ✗ | ✗ |
-| View interactions | ✓ | ✓ | ✓ | ✗ | ✗ |
-| **Alumni** | | | | | |
-| Create alumni record | ✓ | ✓ | ✗ | ✗ | ✗ |
-| View alumni | ✓ | ✓ | ✓ | ✓ | ✗ |
-| Verify alumni | ✓ | ✓ | ✗ | ✗ | ✗ |
-| **Outreach** | | | | | |
-| Send outreach | ✓ | ✓ | ✗ | ✗ | ✗ |
-| View queue | ✓ | ✓ | ✗ | ✗ | ✗ |
-| **Portfolios** | | | | | |
-| Create/edit own | ✓ | ✗ | ✗ | ✓ | ✗ |
-| View any | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Feedback** | | | | | |
-| Submit feedback | ✓ | ✗ | ✗ | ✗ | ✓ |
-| View feedback | ✓ | ✓ | ✓ | ✓ (own) | ✓ (own) |
-| **System** | | | | | |
-| View logs/analytics | ✓ | ✓ (placement) | ✓ (academic) | ✗ | ✗ |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/mous` | Create MoU |
+| `GET` | `/api/mous` | List MoUs (paginated, filterable) |
+| `GET` | `/api/mous/:id` | Get by ID |
+| `GET` | `/api/mous/company/:companyId` | Get by company |
+| `PUT` | `/api/mous/:id` | Update MoU |
+| `PUT` | `/api/mous/:id/status` | Change status |
+| `PUT` | `/api/mous/:id/activate` | Activate |
+| `PUT` | `/api/mous/:id/deactivate` | Deactivate |
+| `DELETE` | `/api/mous/:id` | Soft delete |
+| `DELETE` | `/api/mous/:id/permanent` | Permanently delete |
+| `GET` | `/api/mous/statistics` | Get aggregate statistics |
 
-### 4.3 Password Hashing & Session Expiry
+#### Module: Deal Pipeline (service: `DealPipeline.js`)
 
-```
-// Registration
-password_hash = BCrypt.hashSync(plain_password, 12)
-// cost=12 → ~250ms per hash (hardens against brute-force)
+Full CRUD for deal/opportunity records. Endpoints follow patterns similar to Alumni/MoU above (create, list, get, update, soft-delete, restore, permanent-delete, statistics).
 
-// Login
-is_valid = BCrypt.compareSync(plain_password, stored_hash)
-IF !is_valid → 401
+#### Module: Outreach (service: `OutreachServices.js`)
 
-// Session
-access_token = JWT.sign(
-    { sub: user.id, role: user.role },
-    ACCESS_TOKEN_SECRET,
-    { expiresIn: '15m' }
-)
+Full CRUD for outreach/interaction records. Create, list, get, update, soft-delete, restore, permanently delete, statistics.
 
-refresh_token = JWT.sign(
-    { sub: user.id, token_version: user.token_version },
-    REFRESH_TOKEN_SECRET,
-    { expiresIn: '7d' }
-)
+#### Module: Employment (service: `employment.js`)
 
-// On logout: increment user.token_version (invalidates all refresh tokens)
-// On password change: increment user.token_version
-// On suspicious activity: super_admin can force-increment token_version
-```
+Full CRUD for alumni employment history. Create, list, get, update, delete, statistics.
 
 ---
 
-## 5. Frontend–Backend Integration
+## 3. Security & RBAC
 
-### 5.1 State Management Strategy (Placement Drive)
+### 3.1 JWT Authentication
 
-Use **Redux Toolkit** with a dedicated slice for the Placement Drive lifecycle.
+The system uses a **single JWT token** strategy (no access/refresh token split).
 
-```javascript
-// store/placementDriveSlice.js
-const placementDriveSlice = createSlice({
-    name: 'placementDrive',
-    initialState: {
-        currentJob: null,
-        applications: [],
-        shortlist: [],
-        filters: { status: 'all', minScore: 0, department: 'all' },
-        sortOrder: 'match_score_desc',
-        matchProgress: { status: 'idle', total: 0, processed: 0 }, // for batch matching
-        ui: {
-            activeStep: 'applications',  // 'applications' | 'shortlist' | 'interview' | 'offers'
-            selectedStudentIds: []
-        }
-    },
-    reducers: {
-        setCurrentJob(state, action) { ... },
-        setApplications(state, action) { ... },
-        updateApplicationStatus(state, action) { ... },
-        setShortlist(state, action) { ... },
-        setFilters(state, action) { ... },
-        setSortOrder(state, action) { ... },
-        setMatchProgress(state, action) { ... },
-        setActiveStep(state, action) { ... },
-        toggleStudentSelection(state, action) { ... },
-        clearSelection(state) { ... }
-    },
-    extraReducers: (builder) => {
-        builder
-            .addCase(fetchApplications.pending, (state) => { state.loading = true; })
-            .addCase(fetchApplications.fulfilled, (state, action) => { ... })
-            .addCase(runBatchMatching.pending, (state) => {
-                state.matchProgress.status = 'processing';
-            })
-            .addCase(runBatchMatching.fulfilled, (state) => {
-                state.matchProgress.status = 'completed';
-            });
-    }
-});
+```
+Token creation (login):
+  payload = { id: user.id, email: user.email, role: user.role }
+  token = JWT.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRE || '24h' })
+
+Token verification (middleware):
+  header = req.headers.authorization  // "Bearer <token>"
+  if !header → 401
+  req.user = JWT.verify(token, JWT_SECRET)
+  next()
 ```
 
-**Cross-page persistence:** The `placementDrive` slice is stored in Redux (in-memory). On page refresh, the current job ID is preserved in `sessionStorage`; the middleware re-fetches `GET /api/jobs/:id` and its applications on mount.
+- **`JWT_SECRET`**: Environment variable, configured per deployment
+- **`JWT_EXPIRE`**: Environment variable, defaults to `24h`
+- **Password hashing**: bcrypt with cost factor 10
+- **Password reset flow**: Email OTP → verify-otp returns short-lived reset JWT → reset-password accepts new password
 
-### 5.2 Standardised API Response Structure
+### 3.2 Auth Middleware
 
-```typescript
-// Shared type (TypeScript)
-interface ApiResponse<T> {
-    success: boolean;
-    data: T | null;
-    meta: PaginationMeta | null;
-    error: ApiError | null;
-}
+Two middleware functions are provided in `middleware/auth.js`:
 
-interface PaginationMeta {
-    page: number;
-    per_page: number;
-    total: number;
-    total_pages: number;
-}
+| Middleware | Behavior |
+|-----------|----------|
+| `authenticate` | Extracts Bearer token, verifies JWT, attaches `req.user` with `{ id, email, role }`. Returns 401 on failure. |
+| `isAdmin` | Checks `req.user.role === "admin"`. Returns 403 if not admin. Must follow `authenticate`. |
 
-interface ApiError {
-    code: string;           // Machine-readable: "INVALID_CGPA"
-    message: string;        // Human-readable: "CGPA must be between 0 and 10"
-    details?: Record<string, unknown>;  // Optional context
-}
-```
+### 3.3 Permission Matrix
 
-**Frontend handling pattern:**
+| Operation | Admin | TPO | Coordinator | HOD |
+|-----------|-------|-----|-------------|-----|
+| Create users | ✓ | ✗ | ✗ | ✗ |
+| Login | ✓ | ✓ | ✓ | ✓ |
+| Manage companies | ✓ | ✓ | ✓ | ✓ |
+| Manage alumni | ✓ | ✓ | ✓ | ✓ |
+| Manage MoUs | ✓ | ✓ | ✓ | ✓ |
+| Manage deals | ✓ | ✓ | ✓ | ✓ |
+| Manage outreach | ✓ | ✓ | ✓ | ✓ |
+| View analytics | ✓ | ✓ | ✓ | ✓ |
 
-```typescript
-// api/httpClient.ts
-const httpClient = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE,
-    timeout: 15000,
-    headers: { 'Content-Type': 'application/json' }
-});
+> **Note:** The permission matrix above reflects the capabilities of the built service/controller layer. The only RBAC rule currently **enforced** at the middleware level is `isAdmin` on the `create_user` endpoint. All other endpoints currently have no role gate — they are open to any authenticated user. Role-gating per operation should be added as endpoints are hardened.
 
-// Request interceptor — attach token
-httpClient.interceptors.request.use((config) => {
-    const token = getAccessToken();
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-});
+---
 
-// Response interceptor — unwrap envelope, handle 401 refresh
-httpClient.interceptors.response.use(
-    (response) => response.data,  // returns ApiResponse directly
-    async (error) => {
-        if (error.response?.status === 401 && !error.config._retry) {
-            error.config._retry = true;
-            const refreshed = await attemptTokenRefresh();
-            if (refreshed) return httpClient(error.config);
-        }
-        // Normalise error to ApiError shape
-        const apiError: ApiError = error.response?.data?.error ?? {
-            code: 'NETWORK_ERROR',
-            message: error.message
-        };
-        return Promise.reject(apiError);
-    }
-);
+## 4. Module Inventory
 
-// Usage
-const { data, meta } = await httpClient.get('/api/jobs', {
-    params: { status: 'open', page: 1 }
-});
-```
+### 4.1 Source File Map
 
-### 5.3 Error Code Catalogue
+| Layer | File (relative to `backend/src/`) | Lines | Purpose |
+|-------|-----------------------------------|-------|---------|
+| **Entry** | `server.js` | 39 | Express bootstrap, mounts 3 route modules, DB connection |
+| **Config** | `config/prisma.js` | 26 | Prisma client initialization with PostgreSQL adapter |
+| **Config** | `config/jwt.js` | 12 | JWT sign/verify helpers |
+| **Config** | `config/db.js` | 4 | Re-exports prisma client |
+| **Middleware** | `middleware/auth.js` | 22 | `authenticate` and `isAdmin` middleware |
+| **Routes** | `routes/auth.js` | 183 | Login, forgot-password, create_user, verify-otp, reset-password |
+| **Routes** | `routes/company360.js` | 27 | Company360 CRUD routes (8 endpoints) |
+| **Routes** | `routes/analytics.js` | 7 | Dashboard analytics route |
+| **Controller** | `controller/company360.js` | 185 | Company360 request handlers |
+| **Controller** | `controller/alumni.js` | 365 | Alumni request handlers (not mounted) |
+| **Controller** | `controller/mouvoult.js` | 236 | MoU request handlers (not mounted) |
+| **Controller** | `controller/analytics.js` | 14 | Analytics request handler |
+| **Service** | `service/company360Services.js` | 358 | Company360 business logic |
+| **Service** | `service/alumni.js` | 1186 | Alumni business logic |
+| **Service** | `service/DealPipeline.js` | 914 | Deal pipeline business logic |
+| **Service** | `service/mouvoult.js` | 891 | MoU business logic |
+| **Service** | `service/OutreachServices.js` | 986 | Outreach business logic |
+| **Service** | `service/employment.js` | 313 | Employment business logic |
+| **Service** | `service/Analytics.js` | 67 | Dashboard aggregation logic |
+| **Utils** | `utils/email.js` | 24 | Nodemailer transporter for OTP emails |
 
-| Code | HTTP Status | Meaning |
-|---|---|---|
-| `VALIDATION_ERROR` | 400 | Request body failed schema validation |
-| `UNAUTHORIZED` | 401 | Missing or expired token |
-| `FORBIDDEN` | 403 | Role lacks permission |
-| `RESOURCE_NOT_FOUND` | 404 | Entity ID does not exist |
-| `DUPLICATE_APPLICATION` | 409 | Student already applied to this job |
-| `EMAIL_EXISTS` | 409 | Email already registered |
-| `MOU_OVERLAP` | 409 | Company already has an active MoU |
-| `UNPROCESSABLE` | 422 | Business rule violated (e.g. late application) |
-| `RATE_LIMITED` | 429 | Too many requests |
-| `MATCH_IN_PROGRESS` | 409 | Batch matching already running for this job |
-| `INTERNAL_ERROR` | 500 | Unhandled server error |
+### 4.2 Service-to-Model Mapping
+
+| Service Module | Primary Model | Secondary Models |
+|----------------|---------------|-----------------|
+| `company360Services.js` | Company360 | — |
+| `alumni.js` | Alumni | Company360, Employment |
+| `DealPipeline.js` | DealPipeline | Company360, User |
+| `mouvoult.js` | MoU | Company360 |
+| `OutreachServices.js` | Outreach | Company360 |
+| `employment.js` | Employment | Alumni, Company360 |
+| `Analytics.js` | Company360, MoU, Outreach | — |
+
+### 4.3 Notable Implementation Details
+
+- **Soft delete**: Company360, MoU, Outreach, DealPipeline use `deletedAt` nullable timestamp for soft deletes. Alumni lacks a `deletedAt` field — uses `status` enum instead.
+- **Audit fields**: Most models include `createdBy` and `updatedBy` (UUID strings) for basic audit trails.
+- **Enum normalization**: Service layers include mapping functions (`normalizeEnum`, `statusMap`) to handle both human-readable labels and enum values during input/output.
+- **Schema known issue**: The `Outreach.notes` column is typed as `TIMESTAMPTZ(6)` instead of `TEXT` — this should be corrected in a future migration.
 
 ---
 
 ## Appendix A — Index Summary
 
-| Table | Index | Type | Columns |
-|---|---|---|---|
-| `users` | `idx_users_role` | B-tree | `role` |
-| `users` | `idx_users_email` | B-tree | `email` |
-| `student_profiles` | `idx_student_dept` | B-tree | `department` |
-| `student_profiles` | `idx_student_batch` | B-tree | `batch_year` |
-| `companies` | `idx_company_status` | B-tree | `status` |
-| `companies` | `idx_company_industry` | B-tree | `industry` |
-| `contacts` | `idx_contact_company` | B-tree | `company_id` |
-| `jobs` | `idx_jobs_status` | B-tree | `status` |
-| `jobs` | `idx_jobs_batch` | B-tree | `batch_year` |
-| `jobs` | `idx_jobs_company` | B-tree | `company_id` |
-| `applications` | `uq_applications` | UNIQUE | `(job_id, student_id)` |
-| `applications` | `idx_app_status` | B-tree | `status` |
-| `applications` | `idx_app_student` | B-tree | `student_id` |
-| `interactions` | `idx_interact_company` | B-tree | `company_id` |
-| `interactions` | `idx_interact_date` | B-tree | `interacted_at` |
-| `mous` | `idx_mou_company` | B-tree | `company_id` |
-| `mous` | `idx_mou_status` | B-tree | `status` |
-| `outreach_queue` | `idx_outreach_status` | B-tree | `status` |
-| `outreach_queue` | `idx_outreach_scheduled` | B-tree | `scheduled_at` |
-
-## Appendix B — Redis Key Design (BullMQ & Caching)
-
-| Key Pattern | Purpose | TTL |
-|---|---|---|
-| `bull:send_email:*` | BullMQ job queue | — |
-| `cache:health:{companyId}` | Health score breakdown | 1 hour |
-| `cache:match:{studentId}:{jobId}` | Match score result | 30 min |
-| `rate:outreach:{ip}` | Per-IP rate limiter | 1 min |
-| `lock:health:{companyId}` | Mutex for health recalc | 30 sec |
+| Table | Index Name | Type | Columns |
+|-------|-----------|------|---------|
+| `alumni` | `alumni_company_id` | B-tree | `companyId` |
+| `company360` | `company360_city` | B-tree | `city` |
+| `company360` | `company360_health_score` | B-tree | `healthScore` |
+| `company360` | `company360_industry` | B-tree | `industry` |
+| `company360` | `company360_next_follow_up_date` | B-tree | `nextFollowUpDate` |
+| `company360` | `company360_partnership_level` | B-tree | `partnershipLevel` |
+| `company360` | `company360_relationship_stage` | B-tree | `relationshipStage` |
+| `company360` | `company360_status` | B-tree | `status` |
+| `deal_pipeline` | `deal_pipeline_company_id` | B-tree | `companyId` |
+| `deal_pipeline` | `deal_pipeline_expected_hiring_date` | B-tree | `expectedHiringDate` |
+| `deal_pipeline` | `deal_pipeline_next_follow_up_date` | B-tree | `nextFollowUpDate` |
+| `deal_pipeline` | `deal_pipeline_owner_id` | B-tree | `ownerId` |
+| `deal_pipeline` | `deal_pipeline_priority` | B-tree | `priority` |
+| `deal_pipeline` | `deal_pipeline_probability` | B-tree | `probability` |
+| `deal_pipeline` | `deal_pipeline_stage` | B-tree | `stage` |
+| `mous` | `mous_collaboration_type` | B-tree | `collaborationType` |
+| `mous` | `mous_company_id` | B-tree | `companyId` |
+| `mous` | `mous_end_date` | B-tree | `endDate` |
+| `mous` | `mous_status` | B-tree | `status` |
+| `outreaches` | `outreaches_company_id` | B-tree | `companyId` |
+| `outreaches` | `outreaches_interaction_date` | B-tree | `interactionDate` |
+| `outreaches` | `outreaches_next_follow_up_date` | B-tree | `nextFollowUpDate` |
+| `outreaches` | `outreaches_outcome` | B-tree | `outcome` |
+| `outreaches` | `outreaches_status` | B-tree | `status` |
+| `employment` | `employment_alumni_id` | B-tree | `alumniId` |
+| `employment` | `employment_company_id` | B-tree | `companyId` |
+| `employment` | `employment_alumni_id_is_current` | B-tree | `(alumniId, isCurrent)` |
+| `employment` | `employment_company_id_is_current` | B-tree | `(companyId, isCurrent)` |
