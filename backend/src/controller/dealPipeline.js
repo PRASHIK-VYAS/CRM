@@ -108,3 +108,19 @@ export async function getDealsByCompany(req, res){
         });
     }
 }
+
+// get deals by owner 
+export async function getDealsByOwner(req, res){
+    try {
+        const { ownerId } = req.params;
+        const deals = await dealPipelineService.getDealByOwner(ownerId);
+        return res.status(200).json({ success: true, data: deals });
+    } catch (error) {
+        console.error("get deals by owner failed", error);
+        const status = error.message === "deal owner not found" ? 404 : 500;
+        return res.status(status).json({
+            success: false,
+            message: error.message || "failed to fetch deals by owner",
+        });
+    }
+}
