@@ -66,3 +66,29 @@ export async function getDeals(req, res){
         });
     }
 }
+
+// get deal by id
+export async function getDealById(req, res){
+    try{
+        const { id } = req.params;
+        const { includeDeleted } = req.query;
+
+        const deal = await dealPipelineService.getDealById(id, {
+            includeDeleted: includeDeleted === "true",
+        });
+
+        if(!deal) {
+            return res.status(404).json({
+                success : false,
+                message: "deal not found",
+            });
+        }
+        return res.status(200).json({ success : true, data: deal});
+    } catch (error) {
+        console.error("get deals by id failed", error);
+        return res.status(500).json({
+            success: false,
+            message: "failed to fetch deal",
+        });
+    }
+}
