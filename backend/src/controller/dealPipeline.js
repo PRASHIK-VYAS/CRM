@@ -92,3 +92,19 @@ export async function getDealById(req, res){
         });
     }
 }
+
+// get deals by company 
+export async function getDealsByCompany(req, res){
+    try {
+        const { companyId } = req.params;
+        const deals = await dealPipelineService.getDealByCompany(companyId);
+        return res.status(200).json({ success : true, data : deals});
+    } catch (error) {
+        console.error("get deals by company failed ", error);
+        const status = error.message === "company not found" ? 404 : 500;
+        return res.status(status).json({
+            success: false,
+            message: error.message || "failed to fetch deals by company"
+        });
+    }
+}
