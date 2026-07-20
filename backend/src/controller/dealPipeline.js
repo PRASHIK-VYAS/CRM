@@ -124,3 +124,20 @@ export async function getDealsByOwner(req, res){
         });
     }
 }
+
+// update a deal
+export async function updateDeal(req, res){
+    try {
+        const { id } = req.params;
+        const updatedBy = req.user?.id || null;
+        const deal = await dealPipelineService.updateDeal(id, req.body, updatedBy);
+        return res.status(200).json({ success: true, data: deal });
+    } catch (error) {
+        console.error("update deal failed", error);
+        const status = error.message === "Deal not found" ? 404 : 500;
+        return res.status(status).json({
+            success: false,
+            message: error.message || "failed to update deal",
+        });
+    }
+}
