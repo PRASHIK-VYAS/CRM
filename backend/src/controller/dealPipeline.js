@@ -183,3 +183,20 @@ export async function reassignDeal(req, res){
         });
     }
 }
+
+// archive deal 
+export async function archiveDeal(req, res){
+    try {
+        const { id } = req.params;
+        const updatedBy = req.user?.id || null;
+        const deal = await dealPipelineService.archiveDeal(id, updatedBy);
+        return res.status(200).json({ success: true, data: deal });
+    } catch (error) {
+        console.error("archive deal failed ", error);
+        const status = error.message === "deal not found" ? 404 : 500;
+        return res.status(status).json({
+            success: false,
+            message: error.message || "failed to archive deal",
+        });
+    }
+}
