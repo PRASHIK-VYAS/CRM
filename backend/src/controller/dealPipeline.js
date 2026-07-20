@@ -165,3 +165,21 @@ export async function changeDealStage(req, res){
         });
     }
 }
+
+// reassign deal 
+export async function reassignDeal(req, res){
+    try {
+        const { id } = req.params;
+        const updatedBy = req.user?.id || null;
+        const { ownerId } = req.body;
+        const deal = await dealPipelineService.reassignDeal(id, ownerId, updatedBy);
+        return res.status(200).json({ success: true, data: deal });
+    } catch (error) {
+        console.error("reassign deal failed", error);
+        const status = error.message === "deal not found" | error.message === "nwe deal owner not found" ? 404 : 500;
+        return res.status(status).json({
+            success : false,
+            message: error.message || "failed to reassign deal",
+        });
+    }
+}
