@@ -141,3 +141,27 @@ export async function updateDeal(req, res){
         });
     }
 }
+
+// change deal stage
+export async function changeDealStage(req, res){
+    try {
+        const { id } = req.params;
+        const updatedBy = req.user?.id || null;
+        const { stage, probability, nextAction, nextFollowUpDate, lostReason } = req.body;
+        const deal = await dealPipelineService.changeDealStage(id, stage, {
+            probability,
+            nextAction,
+            nextFollowUpDate,
+            lostReason,
+            updatedBy,
+        });
+        return res.status(200).json({ success : true, data: deal });
+    } catch (error) {
+        console.error("change deal stage failed", error);
+        const status = error.message === "deal not found " ? 404 : 500;
+        return res.status(status).json({
+            success: false,
+            message: error.message || "failed to change deal stage",
+        });
+    }
+}
