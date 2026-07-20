@@ -1,200 +1,117 @@
 flowchart TB
 
 %% ==========================================================
-%% CLIENT LAYER
+%% USERS
 %% ==========================================================
 
 subgraph USERS["Users"]
-    SA([Super Admin])
+    SA([Super Admin / Admin])
     TPO([TPO Officer])
+    COORD([Coordinator])
     HOD([HOD / Dean])
-    ST([Student])
-    REC([Recruiter])
 end
 
 %% ==========================================================
-%% FRONTEND & SECURITY
+%% API LAYER (MOUNTED)
 %% ==========================================================
 
-PWA[React PWA]
-API[API Gateway]
-AUTH([JWT Authentication & RBAC])
+subgraph MOUNTED["REST API — Mounted in server.js"]
+    AUTH[Auth Module<br/>/auth<br/>7 endpoints]
+    C360[Company360 Module<br/>/api/company360<br/>8 endpoints]
+    ANALYTICS[Analytics Module<br/>/analytics<br/>1 endpoint]
+end
 
-SA -->|Manages Platform| PWA
-TPO -->|Operates CRM| PWA
-HOD -->|Reviews Insights| PWA
-ST -->|Submits Resume| PWA
-REC -->|Posts Jobs| PWA
+subgraph MIDDLEWARE["Middleware"]
+    JWT[JWT Authentication]
+    ADMIN[Admin Role Gate]
+end
 
-PWA --> API
-API --> AUTH
+SA -->|Login| AUTH
+TPO -->|Login| AUTH
+COORD -->|Login| AUTH
+HOD -->|Login| AUTH
+
+AUTH --> JWT
+C360 --> JWT
+ANALYTICS --> JWT
+
+JWT --> ADMIN
 
 %% ==========================================================
-%% TRANSACTIONAL ENGINE
+%% CONTROLLERS NOT YET MOUNTED
 %% ==========================================================
 
-subgraph TRANS["Transactional Engine"]
-
-JOB([Job Posting])
-
-APP([Applications])
-
-MATCH([Rule-Based Matching Engine])
-
-PORT([Live Portfolio])
-
-SHORT([Candidate Shortlisting])
-
-INTERVIEW([Interview Process])
-
-OFFER([Offer Management])
-
-JOB -->|Receives Applications| APP
-
-APP -->|Eligibility Data| MATCH
-
-PORT -->|Reviews Portfolio Evidence| MATCH
-
-MATCH -->|Ranks Candidates| SHORT
-
-SHORT -->|Schedules Interviews| INTERVIEW
-
-INTERVIEW -->|Selected Candidates| OFFER
-
+subgraph UNMOUNTED["Controllers Available (not yet wired)"]
+    ALUMNI_CTRL[Alumni Controller<br/>18 endpoints]
+    MOU_CTRL[MoU Controller<br/>11 endpoints]
+    DEAL_CTRL[DealPipeline Controller]
+    OUTREACH_CTRL[Outreach Controller]
+    EMP_CTRL[Employment Controller]
 end
 
 %% ==========================================================
-%% STRATEGIC CRM
+%% SERVICE LAYER
 %% ==========================================================
 
-subgraph CRM["Strategic CRM"]
-
-LEADS([Corporate Leads])
-
-OUTREACH([Outreach Engine])
-
-INTERACT([Interaction History])
-
-MOU([Digital MoU Vault])
-
-HEALTH([Relationship Health Monitor])
-
-SCORE([Company Health Score])
-
-FEEDBACK([Recruiter Feedback Module])
-
-LEADS -->|Launch Campaign| OUTREACH
-
-OUTREACH -->|Creates Engagement| INTERACT
-
-OUTREACH -->|Negotiates Partnership| MOU
-
-INTERACT -->|Interaction Metrics| HEALTH
-
-MOU -->|MoU Status| HEALTH
-
-HEALTH -->|Updates Score| SCORE
-
+subgraph SERVICES["Service Layer (all built)"]
+    C360SVC[Company360Service]
+    ALUMNI_SVC[AlumniService]
+    DEAL_SVC[DealPipelineService]
+    MOU_SVC[MoUService]
+    OUTREACH_SVC[OutreachService]
+    EMP_SVC[EmploymentService]
+    ANALYTICS_SVC[AnalyticsService]
 end
 
-%% ==========================================================
-%% ALUMNI NETWORK
-%% ==========================================================
-
-subgraph ALUMNI["Alumni Network"]
-
-ALUM([Alumni Directory])
-
-ROLE([Society / Role Map])
-
-NEWLEAD([New Company Lead])
-
-ALUM -->|Maps Alumni Positions| ROLE
-
-ROLE -->|Warm Introduction| OUTREACH
-
-OUTREACH -->|Generates Opportunity| NEWLEAD
-
-NEWLEAD -->|Added to CRM| LEADS
-
-end
+C360 --> C360SVC
+ANALYTICS --> ANALYTICS_SVC
+ALUMNI_CTRL --> ALUMNI_SVC
+MOU_CTRL --> MOU_SVC
+DEAL_CTRL --> DEAL_SVC
+OUTREACH_CTRL --> OUTREACH_SVC
+EMP_CTRL --> EMP_SVC
 
 %% ==========================================================
 %% DATABASE
 %% ==========================================================
 
 subgraph DATABASE["Persistent Storage"]
-
-DB[(MySQL Database)]
-
+    PG[(PostgreSQL<br/>Supabase)]
+    PRISMA[Prisma ORM<br/>7 models]
 end
 
-JOB --> DB
-APP --> DB
-MATCH --> DB
-SHORT --> DB
-OFFER --> DB
+C360SVC --> PRISMA
+ALUMNI_SVC --> PRISMA
+DEAL_SVC --> PRISMA
+MOU_SVC --> PRISMA
+OUTREACH_SVC --> PRISMA
+EMP_SVC --> PRISMA
+ANALYTICS_SVC --> PRISMA
 
-LEADS --> DB
-INTERACT --> DB
-MOU --> DB
-SCORE --> DB
-
-ALUM --> DB
-ROLE --> DB
+PRISMA --> PG
 
 %% ==========================================================
 %% EXTERNAL SERVICES
 %% ==========================================================
 
-SMTP[(SMTP Email Gateway)]
+SMTP[(SMTP Email Gateway<br/>Nodemailer)]
 
-OUTREACH -->|Sends Emails| SMTP
-
-%% ==========================================================
-%% STRATEGIC FEEDBACK LOOP
-%% ==========================================================
-
-REC -->|Provides Hiring Feedback| FEEDBACK
-
-FEEDBACK -->|Curriculum Recommendations| HOD
-
-HOD -->|Academic Improvements| TPO
+AUTH -->|Send OTP| SMTP
 
 %% ==========================================================
-%% PORTFOLIO INTEGRATION
+%% DEFERRED TO V2
 %% ==========================================================
 
-ST -->|Uploads Projects| PORT
+subgraph DEFERRED["Deferred to V2"]
+    UI[React PWA / Next.js Frontend]
+    MATCH[Rule-Based Matching Engine]
+    HEALTH[Health Score Calculation]
+    BULK[Async Bulk Email Queue]
+    JOB[Job → Application → Offer Pipeline]
+    PORT[Live Portfolio Showcase]
+    FEEDBACK[Recruiter Feedback Module]
+end
 
-%% ==========================================================
-%% RECRUITER FLOW
-%% ==========================================================
-
-REC -->|Posts Job| JOB
-
-REC -->|Reviews Shortlist| SHORT
-
-REC -->|Issues Offer| OFFER
-
-%% ==========================================================
-%% TPO OPERATIONS
-%% ==========================================================
-
-TPO -->|Creates Outreach| OUTREACH
-
-TPO -->|Publishes Jobs| JOB
-
-TPO -->|Monitors Company Health| SCORE
-
-%% ==========================================================
-%% REPORTING
-%% ==========================================================
-
-REPORT([Reports & Analytics])
-
-DB -->|Business Data| REPORT
-
-REPORT -->|Placement Insights| TPO
-
-REPORT -->|Academic Reports| HOD
+UI -.->|Not built| AUTH
+UI -.->|Not built| C360
+UI -.->|Not built| ANALYTICS
