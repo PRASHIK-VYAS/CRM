@@ -217,3 +217,19 @@ export async function restoreDeal(req, res) {
         });
     }
 }
+
+// permanently delete deal
+export async function deleteDeal(req, res) {
+    try {
+        const { id } = req.params;
+        await dealPipelineService.permanentlyDeleteDeal(id);
+        return res.status(200).json({ success: true, message: "deal permanently deleted" });
+    } catch (error) {
+        console.error("delete deal failed:", error);
+        const status = error.message === "Deal not found" ? 404 : 500;
+        return res.status(status).json({
+            success: false,
+            message: error.message || "failed to permanently delete deal",
+        });
+    }
+}
