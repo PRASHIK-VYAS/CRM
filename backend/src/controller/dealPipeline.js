@@ -251,3 +251,18 @@ export async function getUpcomingFollowUps(req, res) {
         });
     }
 }
+
+// get pipeline statistics
+export async function getPipelineStatistics(req, res) {
+    try {
+        const { ownerId } = req.query;
+        const stats = await dealPipelineService.getPipelineStatistics({ ownerId });
+        return res.status(200).json({ success: true, data: stats });
+    } catch (error) {
+        console.error("get pipeline statistics failed", error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "failed to fetch pipeline statistics",
+        });
+    }
+}
