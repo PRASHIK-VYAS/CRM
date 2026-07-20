@@ -200,3 +200,20 @@ export async function archiveDeal(req, res){
         });
     }
 }
+
+// restore deal
+export async function restoreDeal(req, res) {
+    try {
+        const { id } = req.params;
+        const updatedBy = req.user?.id || null;
+        const deal = await dealPipelineService.restoreDeal(id, updatedBy);
+        return res.status(200).json({ success: true, data: deal });
+    } catch (error) {
+        console.error("restore deal failed", error);
+        const status = error.message === "Deal not found" || error.message === "Deleted deal not found" ? 404 : 500;
+        return res.status(status).json({
+            success: false,
+            message: error.message || "failed to restore deal",
+        });
+    }
+}
