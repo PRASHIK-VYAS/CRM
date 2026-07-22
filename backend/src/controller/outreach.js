@@ -268,3 +268,21 @@ export async function scheduleFollowUp(req, res) {
   }
 }
 
+export async function getUpcomingFollowUps(req, res){
+  try {
+    const outreaches = await outreachService.getUpcomingFollowUps({
+      days:req.query.companyId,
+      createdBy: req.query.createdBy,
+    });
+
+    return res.status(200).json({
+      success : true,
+      data : outreaches,
+    });
+
+  }catch(error){
+    return handleOutreachError(
+      res, error, 
+    )
+  }
+}
