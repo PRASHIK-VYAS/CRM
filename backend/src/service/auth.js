@@ -12,3 +12,19 @@ export async function validatePassword(plain, hash) {
 export async function hashPassword(plain){
     return bcrypt.hash(plain, 10);
 }
+
+export async function createUser({ name, email, password, role }){
+    const now = new Date();
+    return prisma.user.create({
+        data : {
+            name: name.trim(),
+            email: email.trim().toLowerCase(),
+            password: await hashPassword(password),
+            role,
+            createdAt : now,
+            updatedAt : now,
+        },
+        select: { id: true, name: true, email: true, role: true },
+    });
+}
+
