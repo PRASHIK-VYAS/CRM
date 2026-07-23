@@ -25,3 +25,10 @@ export function optionalAuth(req, _res, next) {
   }
   return next();
 }
+
+export function isAdmin(req, res, next) {
+  if(req.user.role !== "admin") {
+    return res.status(403).json({ message: "administrator access required" });
+  }
+  return next();
+}
