@@ -28,3 +28,29 @@ export async function createUser({ name, email, password, role }){
     });
 }
 
+export async function generatePasswordResetOtp(user) {
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    await prisma.user.update({
+        where : { id: user.id },
+        data : {
+            otp,
+            otpExpiry: new Date(Date.now() + 5 * 60 * 1000),
+            resetToken,
+            resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000),
+            updatedAt: new Date(),
+        },
+    });
+    return { otp, resetToken };
+}
+
+export async function verifyOtp(user, otp) {
+  if (!user.otp || !user.otpExpiry || user.otp !== otp || user.otpExpiry <= new Date()) {
+    return false;
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { otp: null, otpExpiry: null, updatedAt: new Date() },
+  });
+  return true;
+}
