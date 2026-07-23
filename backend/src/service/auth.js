@@ -54,3 +54,15 @@ export async function verifyOtp(user, otp) {
   });
   return true;
 }
+
+export async function resetPassword(user, newPassword) {
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: await hashPassword(newPassword),
+      resetToken: null,
+      resetTokenExpiry: null,
+      updatedAt: new Date(),
+    },
+  });
+}
