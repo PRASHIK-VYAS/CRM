@@ -13,3 +13,15 @@ export function authenticate(req, res, next) {
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 }
+
+export function optionalAuth(req, _res, next) {
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) {
+    try {
+      req.user = verifyAccessToken(header.slice(7));
+    } catch {
+      // silently ignore
+    }
+  }
+  return next();
+}
