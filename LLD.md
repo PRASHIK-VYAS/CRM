@@ -3,7 +3,8 @@
 > **Owner**: TrailBlazers  
 > **Stack**: PostgreSQL (via Supabase) | Express.js 5.x | Node.js 20 | Prisma ORM  
 > **Audience**: Backend Development Team  
-> **Version**: 2.1 — EduBridge Enterprise
+> **Version**: 2.1 — EduBridge Enterprise  
+> **Note**: This document references the existing codebase implementation (PostgreSQL/Prisma). For the Enterprise Suite targeting MERN-S (MySQL/Express/React/Node/No-Prisma), see [TRD.md](./TRD.md) — Technical Requirements Document.
 
 ---
 
