@@ -11,7 +11,7 @@ Date: 26 June 2026
     Document Revision History
     | Ver.  | Date        | Description                                                 | Author       |
     |-------|-------------|-------------------------------------------------------------|--------------|
-    | [1.0] | 26 Jun 2026 | Initial draft – Comprehensive specification for MVP release | Project Lead |
+    | [1.0] | 26 Jun 2026 | Initial draft – Comprehensive specification for MVP release | Trailblazers |
 
 
 
@@ -49,11 +49,12 @@ Date: 26 June 2026
     EduBridge Enterprise provides a centralized capability to manage the institutional memory of corporate relations and the transactional flow of placements.
 
     - Phase 1 (Foundation): Core Entity Management (Companies, Students, Users) and RBAC.
-    - Phase 2 (Transactional): Job Lifecycle (Posting $\rightarrow$ Application $\rightarrow$ Offer).
+    - Phase 2 (Transactional): Job Lifecycle (Posting -> Application -> Offer).
     - Phase 3 (Strategic): CRM Outreach, MoU Vault, and Alumni Mapping.
     - Phase 4 (Hardening): Relationship Health Score, Live Portfolios, and Production Deployment.
+    - Phase 5 (Enterprise): Institutional Dashboard, TPO Sync, AI Email Automation, Activity Logs.
 
-    User Roles: Super Admin, TPO Officer, Student, Recruiter.  
+    User Roles: Super Admin, TPO Officer, EBSC, RBSC, HOD, Student.  
     Out of scope for this release: Native mobile apps (iOS/Android), AI-based predictive matching (reserved for V2), and integrated payment gateways.
 
     1.5 References
@@ -81,7 +82,7 @@ Date: 26 June 2026
     | 1      | Admin       | User Mgmt, RBAC      | System Config               | Report Generation     | Global Audit            |
     | 2      | TPO Officer | Company/Contact DB   | Job Drive Mgmt              | Outreach, MoU, Alumni | Health Score, Analytics |
     | 3      | Student     | Profile Mgmt         | App Tracking                | Portfolio Update      | Offer Acceptance        |
-    | 4      | Recruiter   | Account Setup        | Job Post $\rightarrow$ Hire | Feedback Submission   | Portfolio Review        |
+    | 4      | Recruiter   | Account Setup        | Job Post -> Hire            | Feedback Submission   | Portfolio Review        |
     | 5      | System      | Auth/Session Mgmt    | App Logic                   | Email Queue/Reminders | Health Score Calc       |
 
     2.3 User Classes and Characteristics

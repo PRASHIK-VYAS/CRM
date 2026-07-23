@@ -53,10 +53,10 @@
     6. Tech Stack (Technical Requirements)
     - Frontend: Next.js + Tailwind CSS (Responsive Web Application).
     - Backend: Node.js + Express.js (Modular REST API).
-    - Database: MySQL (Relational mapping for strict data integrity).
+    - Database: PostgreSQL 15+ via Supabase (Relational mapping via Prisma ORM).
     - Authentication: JWT (JSON Web Tokens) with Role-Based Access Control (RBAC).
     - APIs / Third-party Services: Nodemailer / SendGrid (for bulk outreach).
-    - AI Models: None in V1 (Rule-based logic for stability).
+    - AI Models: NVIDIA NIM API for email generation (Enterprise extension).
     - Hosting / Deployment: Dockerized containers on a Cloud VPS.
     
     
@@ -70,8 +70,13 @@
     - Digital MoU Vault: Agreement tracking with automated expiry alerts.
     - Outreach Engine: Bulk email campaigns with dynamic templates and tracking.
     - Live Talent Showcase: Integrated portfolio links (GitHub/Behance) for all students.
-    - Role-Based Access (RBAC): Secure portals for Admins, TPOs, and HODs.
-    
+    - Role-Based Access (RBAC): Secure portals for Admins, TPOs, EBSC, RBSC, HODs, and Coordinators.
+    - Activity Logs: Shared call/email/meeting history visible to all admins.
+    - AI Email Automation: NVIDIA NIM-powered personalized outreach email generation.
+    - MoU Deliverable Types: Part A (Seminars) and Part B (Higher Studies) classification.
+    - Placement Drive Tracking: Student appearance/selection tracking per company drive.
+    - Institutional Dashboard: Aggregate placement metrics and package distribution.
+
     Additional Features (Nice to Have)
     - Relationship Health Score: Point-based ranking of company loyalty.
     - Skill-Gap Analytics: Converting recruiter feedback into curriculum reports.

@@ -61,9 +61,10 @@ EduBridge Enterprise provides a centralized capability to manage the institution
 - **Phase 3 (Strategic):** CRM Outreach, MoU Vault, and Alumni Mapping.
 - **Phase 4 (Hardening):** Relationship Health Score, Live Portfolios, and Production Deployment.
 
-**User Roles:** Super Admin, TPO Officer, Student.
+**User Roles:** Super Admin, TPO Officer, EBSC, RBSC, HOD, Student.
 
-**Out of scope for this release:** Native mobile apps (iOS/Android), AI-based predictive matching (reserved for V2), and integrated payment gateways.
+**Out of scope for this release:** Native mobile apps (iOS/Android), and integrated payment gateways.  
+**Enterprise extensions (in scope):** AI-powered email generation (NVIDIA NIM), Institutional Dashboard, TPO Sync API, MoU Part A/B deliverable classification, RBSC/EBSC roles, and shared activity logging.
 
 ### 1.5 References
 
@@ -89,17 +90,23 @@ The system utilizes a centralized relational database (MySQL) with Role-Based Ac
 
 ### 2.2 Product Functions — High-Level Summary
 
-| #  | Login       | Phase 1 (Foundation)  | Phase 2 (Transaction)    | Phase 3 (Strategy)     | Phase 4 (Refinement)     |
-|----|-------------|-----------------------|--------------------------|------------------------|--------------------------|
-| 1  | Admin       | User Mgmt, RBAC       | System Config            | Report Generation      | Global Audit             |
-| 2  | TPO Officer | Company/Contact DB    | Job Drive Mgmt           | Outreach, MoU, Alumni  | Health Score, Analytics  |
-| 3  | Student     | Profile Mgmt          | App Tracking             | Portfolio Update       | Offer Acceptance         |
-| 4  | System      | Auth/Session Mgmt     | App Logic                | Email Queue/Reminders  | Health Score Calc        |
+| #  | Login       | Phase 1 (Foundation)  | Phase 2 (Transaction)    | Phase 3 (Strategy)          | Phase 4 (Refinement)            |
+|----|-------------|-----------------------|--------------------------|-----------------------------|---------------------------------|
+| 1  | Admin       | User Mgmt, RBAC       | System Config            | Report Generation           | Global Audit, Activity Logs     |
+| 2  | TPO Officer | Company/Contact DB    | Job Drive Mgmt, TPO Sync | Outreach, MoU, Alumni, AI   | Health Score, Analytics         |
+| 3  | EBSC        | Department Mgmt       | Academic Partnership     | Higher Studies MoU          | Institutional Dashboard         |
+| 4  | RBSC        | Company Outreach      | Branding Initiatives     | Corporate Events             | AI Email Automation             |
+| 5  | HOD         | Department Oversight  | Faculty Alerts           | MoU Approval                | Notification Routing            |
+| 6  | Student     | Profile Mgmt          | App Tracking             | Portfolio Update             | Offer Acceptance                |
+| 7  | System      | Auth/Session Mgmt     | App Logic                | Email Queue/Reminders        | Health Score Calc, NIM API      |
 
 ### 2.3 User Classes and Characteristics
 
 - **Super Admin:** High technical proficiency; manages system health and users.
 - **TPO Officer:** Moderate technical proficiency; primary power user focused on efficiency.
+- **EBSC (Education & Beyond Sub-Committee):** Strategic academic partnerships and higher studies collaboration.
+- **RBSC (Recruitment & Branding Sub-Committee):** Corporate outreach and branding initiatives.
+- **HOD (Head of Department):** Department-level oversight; receives all faculty notifications.
 - **Student:** High technical proficiency; expects a seamless, modern UI.
 
 ### 2.4 Operating Environment
@@ -113,7 +120,7 @@ The system utilizes a centralized relational database (MySQL) with Role-Based Ac
 ### 2.5 Design and Implementation Constraints
 
 - **Timeline:** Hard deadline of 100 days.
-- **Tech Stack:** Mandated MERN-S (MySQL, Express, React, Node).
+- **Tech Stack:** Mandated PERN-S (PostgreSQL, Express, React, Node) via Prisma ORM.
 - **Logic:** Rule-based deterministic matching only for V1.
 
 ### 2.6 Assumptions and Dependencies
@@ -156,6 +163,8 @@ The system utilizes a centralized relational database (MySQL) with Role-Based Ac
   - **FR-007** The system SHALL track open and click rates for sent emails.
 - **Sub-module: MoU Vault**
   - **FR-008** The system SHALL store MoU PDFs and trigger alerts 30 days before expiry.
+  - **FR-008a** The system SHALL classify MoUs by deliverable type: Part A (Seminars) or Part B (Higher Studies).
+  - **FR-008b** The system SHALL associate MoUs with a specific academic department.
 - **Sub-module: Alumni Influence Map**
   - **FR-009** The system SHALL allow mapping alumni to current company and role.
 
@@ -193,6 +202,29 @@ The system utilizes a centralized relational database (MySQL) with Role-Based Ac
 - **Sub-module: Notification Engine**
   - **FR-014** The system SHALL trigger a reminder for an expiring MoU.
   - **FR-015** The system SHALL alert the TPO when a high-priority company has not been contacted for 90 days.
+  - **FR-015a** The system SHALL route all faculty alerts to HOD and TPO roles instead of individual faculty.
+
+### 3.5 Enterprise Extensions
+
+#### 3.5.1 Institutional Dashboard
+
+- **FR-016** The system SHALL provide an institutional dashboard returning Total Students, Highest Package, Average Package, and Company-wise package distribution.
+
+#### 3.5.2 TPO Sync
+
+- **FR-017** The system SHALL provide a TPO Sync API endpoint to ingest manual placement drive data (students appeared, students selected, package).
+
+#### 3.5.3 AI Email Automation
+
+- **FR-018** The system SHALL integrate with NVIDIA NIM API to generate personalized outreach email drafts based on company context, recipient details, and tone preference.
+
+#### 3.5.4 Shared Activity Log
+
+- **FR-019** The system SHALL maintain a shared activity log for calls, emails, and meetings, visible to all admin roles to provide a unified company history.
+
+#### 3.5.5 Role Expansion
+
+- **FR-020** The system SHALL support RBSC (Recruitment & Branding Sub-Committee) and EBSC (Education & Beyond Sub-Committee) roles in addition to existing Admin, TPO, HOD, and Coordinator roles.
 
 ---
 

@@ -2,7 +2,8 @@
 
 > **Owner**: TrailBlazers  
 > **Stack**: PostgreSQL (via Supabase) | Express.js 5.x | Node.js 20 | Prisma ORM  
-> **Audience**: Backend Development Team
+> **Audience**: Backend Development Team  
+> **Version**: 2.1 — EduBridge Enterprise
 
 ---
 
@@ -23,7 +24,7 @@ The schema is managed via **Prisma ORM** against **PostgreSQL 15+** (hosted on S
 
 #### `User`
 
-Stores system actors (Admin, TPO, Coordinator, HOD). The `role` enum drives access control.
+Stores system actors (Admin, TPO, EBSC, RBSC, Coordinator, HOD). The `role` enum drives access control.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
@@ -31,7 +32,7 @@ Stores system actors (Admin, TPO, Coordinator, HOD). The `role` enum drives acce
 | `name` | `VARCHAR(255)` | `NOT NULL` | Display name |
 | `email` | `VARCHAR(255)` | `UNIQUE, NOT NULL` | Login identifier |
 | `password` | `VARCHAR(255)` | `NOT NULL` | bcrypt hash |
-| `role` | `UserRole` enum | `NOT NULL, DEFAULT 'coordinator'` | `admin \| tpo \| coordinator \| hod` |
+| `role` | `UserRole` enum | `NOT NULL, DEFAULT 'coordinator'` | `admin \| tpo \| ebsc \| rbsc \| coordinator \| hod` |
 | `resetToken` | `VARCHAR(255)` | | Password reset token |
 | `resetTokenExpiry` | `TIMESTAMPTZ(6)` | | Reset token expiry |
 | `otp` | `VARCHAR(255)` | | One-time password for reset |
@@ -39,7 +40,7 @@ Stores system actors (Admin, TPO, Coordinator, HOD). The `role` enum drives acce
 | `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
 | `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
 
-**Relations:** `deals` → `DealPipeline[]`
+**Relations:** `deals` → `DealPipeline[]`, `activityLogs` → `ActivityLog[]`
 
 **Map:** `Users`
 
@@ -75,6 +76,9 @@ Central repository for corporate entities tracked by the TPO cell. Includes CRM 
 | `totalOffers` | `Int` | `DEFAULT 0` | Aggregate counter |
 | `totalVisits` | `Int` | `DEFAULT 0` | Aggregate counter |
 | `totalMoUs` | `Int` | `DEFAULT 0` | Aggregate counter |
+| `dealStatus` | `DealStatus` enum | `DEFAULT 'ACTIVE'` | `ACTIVE \| ON_HOLD \| LOST \| WON` |
+| `phoneNumber` | `VARCHAR(20)` | | Dedicated business phone (distinct from `phone`) |
+| `hireKey` | `VARCHAR(50)` | | Hiring authority key: `"Head"` or `"Co-head"` |
 | `createdBy` | `UUID` | | Actor who created |
 | `updatedBy` | `UUID` | | Actor who last updated |
 | `isActive` | `Boolean` | `DEFAULT true` | Active flag |
@@ -82,7 +86,7 @@ Central repository for corporate entities tracked by the TPO cell. Includes CRM 
 | `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
 | `deletedAt` | `TIMESTAMPTZ(6)` | | Soft-delete timestamp |
 
-**Relations:** `alumni[]`, `deals[]`, `mous[]`, `outreaches[]`, `employments[]`
+**Relations:** `alumni[]`, `deals[]`, `mous[]`, `outreaches[]`, `employments[]`, `placementDrives[]`, `activityLogs[]`
 
 **Indexes:** `city`, `healthScore`, `industry`, `nextFollowUpDate`, `partnershipLevel`, `relationshipStage`, `status`
 
@@ -177,12 +181,13 @@ Tracks opportunities with companies through a multi-stage sales pipeline from co
 
 #### `MoU`
 
-Digital Memorandum of Understanding records tracking agreements between the institution and corporate partners.
+Digital Memorandum of Understanding records tracking agreements between the institution and corporate partners. Supports deliverable classification (Part A: Seminars, Part B: Higher Studies) and departmental association.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | `id` | `UUID` | `PK` | |
 | `companyId` | `UUID` | `FK → Company360.id, NOT NULL` | Partner company |
+| `departmentId` | `UUID` | `FK → Department.id` | Owning academic department |
 | `mouNumber` | `VARCHAR(50)` | `UNIQUE, NOT NULL` | Reference number |
 | `title` | `VARCHAR(255)` | `NOT NULL` | MoU title |
 | `purpose` | `TEXT` | | Description of purpose |
@@ -191,6 +196,7 @@ Digital Memorandum of Understanding records tracking agreements between the inst
 | `signedDate` | `DATE` | `NOT NULL` | Date signed |
 | `status` | `MoUStatus` enum | `DEFAULT 'DRAFT'` | `DRAFT \| PENDING \| ACTIVE \| EXPIRED \| TERMINATED \| RENEWED` |
 | `collaborationType` | `CollaborationType` enum | `NOT NULL` | `PLACEMENTS \| INTERNSHIPS \| TRAINING \| RESEARCH \| CONSULTANCY \| INDUSTRY_VISIT \| WORKSHOP \| MULTIPLE \| OTHER` |
+| `deliverableType` | `DeliverableType` enum | `DEFAULT 'PART_A_SEMINARS'` | `PART_A_SEMINARS \| PART_B_HIGHER_STUDIES \| BOTH` |
 | `signedByCompany` | `VARCHAR(255)` | | Company signatory name |
 | `signedByInstitute` | `VARCHAR(255)` | | Institute signatory name |
 | `renewalReminderDays` | `Int` | `DEFAULT 30` | Days before expiry to trigger reminder |
@@ -203,9 +209,9 @@ Digital Memorandum of Understanding records tracking agreements between the inst
 | `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
 | `deletedAt` | `TIMESTAMPTZ(6)` | | Soft-delete |
 
-**Relations:** `company → Company360`
+**Relations:** `company → Company360`, `department → Department`
 
-**Indexes:** `collaborationType`, `companyId`, `endDate`, `status`
+**Indexes:** `collaborationType`, `companyId`, `departmentId`, `endDate`, `status`
 
 **Map:** `mous`
 
@@ -226,7 +232,7 @@ Logs every touchpoint with a company — emails, calls, meetings, visits, and ot
 | `outcome` | `OutreachOutcome` enum | `DEFAULT 'NEUTRAL'` | `POSITIVE \| NEUTRAL \| NEGATIVE \| NO_RESPONSE \| FOLLOW_UP_REQUIRED` |
 | `status` | `OutreachStatus` enum | `DEFAULT 'PLANNED'` | `PLANNED \| COMPLETED \| CANCELLED \| MISSED` |
 | `nextFollowUpDate` | `TIMESTAMPTZ(6)` | | Scheduled next outreach |
-| `notes` | `TIMESTAMPTZ(6)` | | Free-form notes |
+| `notes` | `TEXT` | | Free-form notes |
 | `createdBy` | `UUID` | `NOT NULL` | |
 | `updatedBy` | `UUID` | | |
 | `isActive` | `Boolean` | `DEFAULT true` | |
@@ -272,17 +278,88 @@ Tracks alumni employment history — current and past positions at companies.
 
 ---
 
+#### `Department`
+
+Academic departments within the institution. Enables department-level association of MoUs and alumni records.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | `PK` | |
+| `name` | `VARCHAR(100)` | `UNIQUE, NOT NULL` | Display name (e.g. "Computer Engineering") |
+| `code` | `VARCHAR(10)` | `UNIQUE, NOT NULL` | Short code (e.g. "COMP") |
+| `isActive` | `Boolean` | `DEFAULT true` | |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+
+**Relations:** `alumni[]`, `mous[]`
+
+**Map:** `departments`
+
+---
+
+#### `PlacementDrive`
+
+Tracks individual placement drives per company — the job event, student participation, selection counts, and package offered.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | `PK` | |
+| `companyId` | `UUID` | `FK → Company360.id, NOT NULL` | Hiring company |
+| `driveDate` | `DATE` | `NOT NULL` | Date of the drive |
+| `jobTitle` | `VARCHAR(255)` | `NOT NULL` | Job role / title |
+| `studentsAppeared` | `Int` | `DEFAULT 0` | Number of students who appeared |
+| `studentsSelected` | `Int` | `DEFAULT 0` | Number of students selected |
+| `package` | `DECIMAL(10,2)` | | Highest/LPA package offered |
+| `notes` | `TEXT` | | Internal notes |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+| `updatedAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+
+**Relations:** `company → Company360`
+
+**Indexes:** `companyId`
+
+**Map:** `placement_drives`
+
+---
+
+#### `ActivityLog`
+
+Shared activity log for calls, emails, and meetings — visible to all admins to provide a unified company history. Every outreach interaction also writes a corresponding ActivityLog entry.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `UUID` | `PK` | |
+| `companyId` | `UUID` | `FK → Company360.id, NOT NULL` | Target company |
+| `type` | `VARCHAR(20)` | `NOT NULL` | `CALL \| EMAIL \| MEETING \| NOTE` |
+| `subject` | `VARCHAR(255)` | `NOT NULL` | Log subject line |
+| `description` | `TEXT` | | Detailed description |
+| `performedBy` | `Int` | `FK → User.id, NOT NULL` | User who performed the action |
+| `createdAt` | `TIMESTAMPTZ(6)` | `NOT NULL` | |
+
+**Relations:** `company → Company360`, `user → User`
+
+**Indexes:** `companyId`, `performedBy`
+
+**Map:** `activity_logs`
+
+---
+
 ### 1.2 Entity Relationship Diagram
 
 ```mermaid
 erDiagram
     User ||--o{ DealPipeline : owns
+    User ||--o{ ActivityLog : logs
     Company360 ||--o{ Alumni : employs
     Company360 ||--o{ DealPipeline : targets
     Company360 ||--o{ MoU : signs
     Company360 ||--o{ Outreach : logs
     Company360 ||--o{ Employment : hosts
+    Company360 ||--o{ PlacementDrive : conducts
+    Company360 ||--o{ ActivityLog : tracks
     Alumni ||--o{ Employment : has
+    Department ||--o{ Alumni : belongs_to
+    Department ||--o{ MoU : governs
 ```
 
 ---
@@ -321,7 +398,7 @@ HTTP status codes: `200` (success), `201` (created), `400` (validation), `401` (
 
 ---
 
-### 2.2 Mounted Modules (active in server.js)
+### 2.2 Mounted Modules (all routes wired in server.js)
 
 #### Module: Auth
 
@@ -344,6 +421,22 @@ Base path: `/analytics`
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | `GET` | `/dashboard` | No | Returns aggregate counts for companies (total/active/prospect/inactive), MoUs, outreaches, health score average, industry breakdown, status breakdown |
+| `GET` | `/institutional-dashboard` | No | Returns Total Students, Highest Package, Average Package, and Company-wise package distribution |
+
+**`GET /analytics/institutional-dashboard` Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalStudents": 5000,
+    "highestPackage": 2500000,
+    "averagePackage": 650000,
+    "companyWiseDistribution": [
+      { "company": "Google", "students": 12, "avgPackage": 2400000 }
+    ]
+  }
+}
+```
 
 #### Module: Company360
 
@@ -352,71 +445,166 @@ Base path: `/api/company360`
 | Method | Endpoint | Auth | Request / Query | Description |
 |--------|----------|------|----------------|-------------|
 | `POST` | `/` | No | `{ companyName, industry, ... }` | Create new company |
-| `GET` | `/` | No | `?page, limit, search, industry, status, city, sortBy, sortOrder, includeDeleted` | List companies (paginated, filterable) |
+| `GET` | `/` | No | `?page, limit, search, industry, status, partnershipLevel, city, isActive, includeDeleted, sortBy, sortOrder` | List companies (paginated, filterable) |
 | `GET` | `/:id` | No | `?includeDeleted` | Get company by ID |
-| `GET` | `/:id/details` | No | — | Get company with relations |
-| `GET` | `/:id/statistics` | No | — | Get aggregated stats |
-| `PUT` | `/:id` | No | `{ companyName, industry, ... }` | Update company |
+| `GET` | `/:id/details` | No | — | Get company with relations (MoUs, outreaches, deals, alumni) |
+| `GET` | `/:id/statistics` | No | — | Get aggregated stats (activeMoUs, outreaches, deals, alumniCount) |
+| `PUT` | `/:id` | No | `{ companyName, industry, ... }` | Update company fields |
+| `DELETE` | `/:id` | No | — | Soft delete (sets deletedAt) |
 | `DELETE` | `/:id/restore` | No | — | Restore soft-deleted company |
 | `DELETE` | `/:id/permanently-delete` | No | — | Hard delete |
 
----
+#### Module: Alumni
 
-### 2.3 Unmounted Modules (controllers exist, not wired in server.js)
-
-The following controllers implement full CRUD but are **not yet mounted** in `server.js`. Their endpoints are specified below for reference — they become active once their route file is imported and registered.
-
-#### Module: Alumni (controller: `alumni.js`)
+Base path: `/api/alumni`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/alumni` | Create alumni |
-| `GET` | `/api/alumni` | List alumni (paginated, filterable) |
-| `GET` | `/api/alumni/:id` | Get by ID |
-| `GET` | `/api/alumni/code/:alumniCode` | Get by alumni code |
-| `GET` | `/api/alumni/email/:email` | Get by email |
-| `GET` | `/api/alumni/company/:companyId` | Get by company |
-| `PUT` | `/api/alumni/:id` | Update alumni |
-| `PUT` | `/api/alumni/:id/assign-company` | Assign to company |
-| `DELETE` | `/api/alumni/:id/remove-company` | Remove company assignment |
-| `PUT` | `/api/alumni/:id/scores` | Update influence/relationship scores |
-| `POST` | `/api/alumni/:id/contact` | Record contact |
-| `POST` | `/api/alumni/:id/skills` | Add skills |
-| `DELETE` | `/api/alumni/:id/skills` | Remove skill |
-| `PUT` | `/api/alumni/:id/help-preferences` | Update willingness to help |
-| `PUT` | `/api/alumni/:id/status` | Change status |
-| `PUT` | `/api/alumni/:id/activate` | Activate |
-| `PUT` | `/api/alumni/:id/deactivate` | Deactivate |
-| `DELETE` | `/api/alumni/:id` | Permanently delete |
-| `GET` | `/api/alumni/statistics` | Get aggregate statistics |
+| `POST` | `/` | Create alumni |
+| `GET` | `/` | List alumni (paginated, filterable by department, batchYear, seniorityLevel, companyId, skill, etc.) |
+| `GET` | `/statistics` | Get aggregate statistics |
+| `GET` | `/code/:alumniCode` | Get by alumni code |
+| `GET` | `/email/:email` | Get by email |
+| `GET` | `/company/:companyId` | Get by company |
+| `GET` | `/:id` | Get by ID |
+| `PUT` | `/:id` | Update alumni |
+| `PATCH` | `/:id/company` | Assign to company |
+| `DELETE` | `/:id/company` | Remove company assignment |
+| `PATCH` | `/:id/scores` | Update influence/relationship scores |
+| `POST` | `/:id/contact` | Record contact |
+| `POST` | `/:id/skills` | Add skills |
+| `DELETE` | `/:id/skills` | Remove skill |
+| `PATCH` | `/:id/help-preferences` | Update willingness to help |
+| `PATCH` | `/:id/status` | Change status |
+| `PATCH` | `/:id/activate` | Activate |
+| `PATCH` | `/:id/deactivate` | Deactivate |
+| `DELETE` | `/:id/permanently-delete` | Permanently delete |
 
-#### Module: MoU (controller: `mouvoult.js`)
+#### Module: Deal Pipeline
+
+Base path: `/api/deals`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/mous` | Create MoU |
-| `GET` | `/api/mous` | List MoUs (paginated, filterable) |
-| `GET` | `/api/mous/:id` | Get by ID |
-| `GET` | `/api/mous/company/:companyId` | Get by company |
-| `PUT` | `/api/mous/:id` | Update MoU |
-| `PUT` | `/api/mous/:id/status` | Change status |
-| `PUT` | `/api/mous/:id/activate` | Activate |
-| `PUT` | `/api/mous/:id/deactivate` | Deactivate |
-| `DELETE` | `/api/mous/:id` | Soft delete |
-| `DELETE` | `/api/mous/:id/permanent` | Permanently delete |
-| `GET` | `/api/mous/statistics` | Get aggregate statistics |
+| `POST` | `/` | Create deal |
+| `GET` | `/` | List deals (paginated, filterable by stage, priority, source, riskLevel, probability range, follow-up window, etc.) |
+| `GET` | `/statistics` | Get pipeline statistics (total, byStage, byPriority, byRiskLevel) |
+| `GET` | `/upcoming-follow-ups` | List deals with follow-up in next N days |
+| `GET` | `/company/:companyId` | Get deals by company |
+| `GET` | `/owner/:ownerId` | Get deals by owner |
+| `GET` | `/:id` | Get deal by ID |
+| `PUT` | `/:id` | Update deal |
+| `PATCH` | `/:id/stage` | Change deal stage (triggers probability updates, date stamps) |
+| `PATCH` | `/:id/reassign` | Reassign deal owner |
+| `PATCH` | `/:id/archive` | Archive deal |
+| `PATCH` | `/:id/restore` | Restore archived/deleted deal |
+| `DELETE` | `/:id` | Permanently delete deal |
 
-#### Module: Deal Pipeline (service: `DealPipeline.js`)
+#### Module: MoU
 
-Full CRUD for deal/opportunity records. Endpoints follow patterns similar to Alumni/MoU above (create, list, get, update, soft-delete, restore, permanent-delete, statistics).
+Base path: `/api/mou`
 
-#### Module: Outreach (service: `OutreachServices.js`)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/` | Create MoU (supports `departmentId`, `deliverableType`) |
+| `GET` | `/` | List MoUs (paginated, filterable by status, collaborationType, companyId, date ranges) |
+| `GET` | `/statistics` | Get aggregate MoU statistics |
+| `GET` | `/company/:companyId` | Get MoUs by company |
+| `GET` | `/:id` | Get MoU by ID |
+| `PUT` | `/:id/status` | Change MoU status |
+| `PATCH` | `/:id/activate` | Activate MoU |
+| `PATCH` | `/:id/deactivate` | Deactivate MoU |
+| `DELETE` | `/:id` | Soft delete MoU |
+| `DELETE` | `/:id/permanently-delete` | Permanently delete MoU |
 
-Full CRUD for outreach/interaction records. Create, list, get, update, soft-delete, restore, permanently delete, statistics.
+#### Module: Outreach
 
-#### Module: Employment (service: `employment.js`)
+Base path: `/api/outreach`
 
-Full CRUD for alumni employment history. Create, list, get, update, delete, statistics.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/` | Create outreach record |
+| `GET` | `/` | List outreaches (paginated, filterable by type, status, outcome, company, date ranges) |
+| `GET` | `/statistics` | Get outreach statistics (completion rate, byType, byOutcome, byStatus) |
+| `GET` | `/upcoming-follow-ups` | List upcoming follow-ups within N days |
+| `GET` | `/company/:companyId` | Get outreaches by company |
+| `GET` | `/:id` | Get outreach by ID |
+| `PUT` | `/:id` | Update outreach |
+| `PATCH` | `/:id/complete` | Mark outreach as completed |
+| `PATCH` | `/:id/cancel` | Cancel outreach |
+| `PATCH` | `/:id/missed` | Mark outreach as missed |
+| `POST` | `/:id/follow-up` | Schedule follow-up outreach |
+| `DELETE` | `/:id` | Soft delete |
+| `DELETE` | `/:id/permanently-delete` | Permanently delete |
+
+#### Module: Employment
+
+Base path: `/api/employment`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/` | Create employment record |
+| `GET` | `/` | List employments (paginated, filterable by alumniId, companyId, isCurrent) |
+| `GET` | `/:id` | Get employment by ID |
+| `PUT` | `/:id` | Update employment |
+| `DELETE` | `/:id` | Delete employment |
+
+#### Module: TPO Sync
+
+Base path: `/api/tpo`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/sync-student-counts` | Ingest manual placement drive data |
+
+**`POST /api/tpo/sync-student-counts` Request:**
+```json
+{
+  "companyId": "uuid",
+  "driveDate": "2026-08-15",
+  "jobTitle": "Software Engineer",
+  "studentsAppeared": 45,
+  "studentsSelected": 12,
+  "package": 1200000
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": { "id": "uuid", "companyId": "uuid", ... }
+}
+```
+
+#### Module: AI (NVIDIA NIM)
+
+Base path: `/api/ai`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/generate-email` | Generate personalized outreach email via NVIDIA NIM |
+
+**`POST /api/ai/generate-email` Request:**
+```json
+{
+  "companyName": "Google",
+  "recipientName": "John Doe",
+  "context": "We are looking to collaborate for campus placements",
+  "tone": "professional"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "subject": "Collaboration Opportunity with EduBridge",
+    "body": "Dear John,..."
+  }
+}
+```
 
 ---
 
@@ -445,25 +633,41 @@ Token verification (middleware):
 
 ### 3.2 Auth Middleware
 
-Two middleware functions are provided in `middleware/auth.js`:
+Five middleware functions are provided in `middleware/auth.js`:
 
 | Middleware | Behavior |
 |-----------|----------|
 | `authenticate` | Extracts Bearer token, verifies JWT, attaches `req.user` with `{ id, email, role }`. Returns 401 on failure. |
 | `isAdmin` | Checks `req.user.role === "admin"`. Returns 403 if not admin. Must follow `authenticate`. |
+| `isTPO` | Checks `req.user.role` is at least `tpo` level (admin, tpo, ebsc, rbsc). Returns 403 otherwise. |
+| `isRBSC` | Checks `req.user.role` is `rbsc` or higher (admin, tpo, ebsc, rbsc). Returns 403 otherwise. |
+| `isEBSC` | Checks `req.user.role` is `ebsc` or higher (admin, tpo, ebsc). Returns 403 otherwise. |
 
-### 3.3 Permission Matrix
+### 3.3 Role Hierarchy
 
-| Operation | Admin | TPO | Coordinator | HOD |
-|-----------|-------|-----|-------------|-----|
-| Create users | ✓ | ✗ | ✗ | ✗ |
-| Login | ✓ | ✓ | ✓ | ✓ |
-| Manage companies | ✓ | ✓ | ✓ | ✓ |
-| Manage alumni | ✓ | ✓ | ✓ | ✓ |
-| Manage MoUs | ✓ | ✓ | ✓ | ✓ |
-| Manage deals | ✓ | ✓ | ✓ | ✓ |
-| Manage outreach | ✓ | ✓ | ✓ | ✓ |
-| View analytics | ✓ | ✓ | ✓ | ✓ |
+```
+admin  >  tpo  >  ebsc  >  rbsc  >  hod  >  coordinator
+```
+
+Higher roles inherit all permissions of lower roles.
+
+### 3.4 Permission Matrix
+
+| Operation | Admin | TPO | EBSC | RBSC | HOD | Coordinator |
+|-----------|-------|-----|------|------|-----|-------------|
+| Create users | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Login | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manage companies | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manage alumni | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manage MoUs | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manage deals | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manage outreach | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| View analytics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Institutional Dashboard | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| TPO Sync (ingest drives) | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| AI Email Generation | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
+| View activity logs | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Create activity logs | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 > **Note:** The permission matrix above reflects the capabilities of the built service/controller layer. The only RBAC rule currently **enforced** at the middleware level is `isAdmin` on the `create_user` endpoint. All other endpoints currently have no role gate — they are open to any authenticated user. Role-gating per operation should be added as endpoints are hardened.
 
@@ -475,25 +679,40 @@ Two middleware functions are provided in `middleware/auth.js`:
 
 | Layer | File (relative to `backend/src/`) | Lines | Purpose |
 |-------|-----------------------------------|-------|---------|
-| **Entry** | `server.js` | 39 | Express bootstrap, mounts 3 route modules, DB connection |
+| **Entry** | `server.js` | 39 | Express bootstrap, mounts all route modules, DB connection |
 | **Config** | `config/prisma.js` | 26 | Prisma client initialization with PostgreSQL adapter |
 | **Config** | `config/jwt.js` | 12 | JWT sign/verify helpers |
 | **Config** | `config/db.js` | 4 | Re-exports prisma client |
-| **Middleware** | `middleware/auth.js` | 22 | `authenticate` and `isAdmin` middleware |
+| **Middleware** | `middleware/auth.js` | 22 | `authenticate`, `isAdmin`, `isTPO`, `isRBSC`, `isEBSC` middleware |
 | **Routes** | `routes/auth.js` | 183 | Login, forgot-password, create_user, verify-otp, reset-password |
-| **Routes** | `routes/company360.js` | 27 | Company360 CRUD routes (8 endpoints) |
-| **Routes** | `routes/analytics.js` | 7 | Dashboard analytics route |
+| **Routes** | `routes/analytics.js` | 7 | Dashboard + institutional dashboard analytics routes |
+| **Routes** | `routes/company360.js` | 27 | Company360 CRUD routes |
+| **Routes** | `routes/alumni.js` | 48 | Alumni CRUD routes |
+| **Routes** | `routes/dealPipeline.js` | 34 | Deal pipeline CRUD + stage management routes |
+| **Routes** | `routes/mouvoult.js` | 31 | MoU CRUD + status management routes |
+| **Routes** | `routes/outreach.js` | 30 | Outreach CRUD + follow-up routes |
+| **Routes** | `routes/employment.js` | 18 | Employment CRUD routes |
+| **Routes** | `routes/tpo.js` | — | TPO Sync endpoints |
+| **Routes** | `routes/ai.js` | — | AI email generation endpoints |
 | **Controller** | `controller/company360.js` | 185 | Company360 request handlers |
-| **Controller** | `controller/alumni.js` | 365 | Alumni request handlers (not mounted) |
-| **Controller** | `controller/mouvoult.js` | 236 | MoU request handlers (not mounted) |
-| **Controller** | `controller/analytics.js` | 14 | Analytics request handler |
+| **Controller** | `controller/alumni.js` | 365 | Alumni request handlers |
+| **Controller** | `controller/mouvoult.js` | 236 | MoU request handlers |
+| **Controller** | `controller/analytics.js` | 14 | Analytics + institutional dashboard request handlers |
+| **Controller** | `controller/dealPipeline.js` | 268 | Deal pipeline request handlers |
+| **Controller** | `controller/outreach.js` | 288 | Outreach request handlers |
+| **Controller** | `controller/employment.js` | 115 | Employment request handlers |
+| **Controller** | `controller/tpo.js` | — | TPO sync request handlers |
+| **Controller** | `controller/ai.js` | — | AI email generation request handlers |
 | **Service** | `service/company360Services.js` | 358 | Company360 business logic |
 | **Service** | `service/alumni.js` | 1186 | Alumni business logic |
 | **Service** | `service/DealPipeline.js` | 914 | Deal pipeline business logic |
 | **Service** | `service/mouvoult.js` | 891 | MoU business logic |
 | **Service** | `service/OutreachServices.js` | 986 | Outreach business logic |
 | **Service** | `service/employment.js` | 313 | Employment business logic |
-| **Service** | `service/Analytics.js` | 67 | Dashboard aggregation logic |
+| **Service** | `service/Analytics.js` | 67 | Dashboard + institutional dashboard aggregation logic |
+| **Service** | `service/ActivityLog.js` | — | Shared activity log service (writes to `activity_logs` table for calls/emails/meetings) |
+| **Service** | `service/TpoSync.js` | — | TPO sync business logic for placement drive ingestion |
+| **Service** | `service/AiService.js` | — | NVIDIA NIM API integration for email generation |
 | **Utils** | `utils/email.js` | 24 | Nodemailer transporter for OTP emails |
 
 ### 4.2 Service-to-Model Mapping
@@ -501,19 +720,25 @@ Two middleware functions are provided in `middleware/auth.js`:
 | Service Module | Primary Model | Secondary Models |
 |----------------|---------------|-----------------|
 | `company360Services.js` | Company360 | — |
-| `alumni.js` | Alumni | Company360, Employment |
+| `alumni.js` | Alumni | Company360, Employment, Department |
 | `DealPipeline.js` | DealPipeline | Company360, User |
-| `mouvoult.js` | MoU | Company360 |
+| `mouvoult.js` | MoU | Company360, Department |
 | `OutreachServices.js` | Outreach | Company360 |
 | `employment.js` | Employment | Alumni, Company360 |
-| `Analytics.js` | Company360, MoU, Outreach | — |
+| `Analytics.js` | Company360, MoU, Outreach | PlacementDrive |
+| `ActivityLog.js` | ActivityLog | Company360, User |
+| `TpoSync.js` | PlacementDrive | Company360 |
+| `AiService.js` | — (external API) | — |
 
 ### 4.3 Notable Implementation Details
 
 - **Soft delete**: Company360, MoU, Outreach, DealPipeline use `deletedAt` nullable timestamp for soft deletes. Alumni lacks a `deletedAt` field — uses `status` enum instead.
 - **Audit fields**: Most models include `createdBy` and `updatedBy` (UUID strings) for basic audit trails.
 - **Enum normalization**: Service layers include mapping functions (`normalizeEnum`, `statusMap`) to handle both human-readable labels and enum values during input/output.
-- **Schema known issue**: The `Outreach.notes` column is typed as `TIMESTAMPTZ(6)` instead of `TEXT` — this should be corrected in a future migration.
+- **Shared activity log**: The `ActivityLog` service writes an entry for every call/email/meeting interaction, visible to all admin-level roles. This provides a unified company history across the TPO team.
+- **Notification routing**: Faculty-facing alerts (MoU expiry, follow-up reminders) are routed to users with `hod` and `tpo` roles rather than individual faculty members.
+- **NVIDIA NIM integration**: The AI email generation service calls the NVIDIA NIM API with contextual prompts to generate personalized outreach emails. Requires `NVIDIA_API_KEY` environment variable.
+- **Part A / Part B deliverables**: MoUs can be classified as `PART_A_SEMINARS` (corporate seminars) or `PART_B_HIGHER_STUDIES` (higher education collaboration) via the `deliverableType` enum.
 
 ---
 
@@ -549,3 +774,7 @@ Two middleware functions are provided in `middleware/auth.js`:
 | `employment` | `employment_company_id` | B-tree | `companyId` |
 | `employment` | `employment_alumni_id_is_current` | B-tree | `(alumniId, isCurrent)` |
 | `employment` | `employment_company_id_is_current` | B-tree | `(companyId, isCurrent)` |
+| `mous` | `mous_department_id` | B-tree | `departmentId` |
+| `placement_drives` | `placement_drives_company_id` | B-tree | `companyId` |
+| `activity_logs` | `activity_logs_company_id` | B-tree | `companyId` |
+| `activity_logs` | `activity_logs_performed_by` | B-tree | `performedBy` |
