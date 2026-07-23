@@ -1,127 +1,155 @@
 # EduBridge Enterprise — Role Matrix
 
-> **Version:** 1.0 — EduBridge Enterprise  
-> **Last Updated:** 2026-07-23
+> **Version:** 2.0 — Enterprise Suite  
+> **Last Updated:** 2026-07-23  
+> **Status:** Internal — Confidential
 
 ## Role Hierarchy
 
 ```
-admin  >  tpo  >  ebsc  >  rbsc  >  hod  >  coordinator
+admin  >  head  >  tpo  >  co_head  >  ebsc  >  rbsc  >  coordinator
 ```
 
-Higher roles inherit all permissions of lower roles.
+Higher roles inherit all permissions of lower roles. Coordinator scope is limited to their assigned department.
 
 ## Role Definitions
 
 | Role | Identifier | Description |
 |------|-----------|-------------|
-| **Admin** | `admin` | System administrator — full access to all modules, user management, and system configuration. |
-| **TPO** | `tpo` | Training & Placement Officer — primary power user. Full access to CRM, drives, analytics, AI tools, and data ingestion. |
-| **EBSC** | `ebsc` | Education & Beyond Sub-Committee — strategic academic partnerships and higher studies collaboration. Same access as TPO except no user management. |
-| **RBSC** | `rbsc` | Recruitment & Branding Sub-Committee — corporate outreach and branding initiatives. Can manage companies, deals, outreach, and view analytics. |
-| **HOD** | `hod` | Head of Department — read and manage entities within their department scope. Receives all faculty alerts and notifications. |
-| **Coordinator** | `coordinator` | Department coordinator — basic CRUD access to company, alumni, and MoU records. |
+| **Admin** | `admin` | System administrator — full access to all modules, user management, system configuration, and audit. |
+| **Head** | `head` | Top-level TPO lead — cross-department visibility, all modules, Peak Package reporting, institutional dashboard, executive KPIs. |
+| **TPO** | `tpo` | Training & Placement Officer — primary power user. Full CRM, AI email generation, web scraping review, drive ingestion, analytics. |
+| **Co-Head** | `co_head` | Deputy to Head — manages a vertical/team of Coordinators. Kanban pipeline ownership, team oversight, department-filtered views. |
+| **EBSC** | `ebsc` | Education & Beyond Sub-Committee — strategic academic partnerships and higher studies MoUs. |
+| **RBSC** | `rbsc` | Recruitment & Branding Sub-Committee — corporate outreach, company tier classification, branding initiatives. |
+| **Coordinator** | `coordinator` | Department-level operator — scoped to own department's companies, MoUs, alumni, deals, and drives. |
 
 ## Permission Matrix
 
 ### Core Modules
 
-| Module | Operation | Admin | TPO | EBSC | RBSC | HOD | Coordinator |
-|--------|-----------|-------|-----|------|------|-----|-------------|
-| **Users** | Create | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Users** | Read | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Users** | Update/Delete | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Auth** | Login | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Auth** | Password reset | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Module | Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|--------|-----------|-------|------|-----|---------|------|------|-------------|
+| **Users** | Create | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Users** | Read | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Users** | Update/Delete | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Auth** | Login | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Auth** | Password reset | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-### CRM Module (Company360)
+### Company Tiers & 360° Directory
 
-| Operation | Admin | TPO | EBSC | RBSC | HOD | Coordinator |
-|-----------|-------|-----|------|------|-----|-------------|
-| Create company | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Read companies | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Update company | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Soft delete / Restore | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Permanently delete | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
-| View company details | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| View company statistics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|-----------|-------|------|-----|---------|------|------|-------------|
+| Create company | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Read companies | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (dept-scoped) |
+| Update company | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Set company tier | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✗ |
+| Set hireKey | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Soft delete / Restore | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Permanently delete | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
 
-### Deal Pipeline
+### Kanban Deal Pipeline
 
-| Operation | Admin | TPO | EBSC | RBSC | HOD | Coordinator |
-|-----------|-------|-----|------|------|-----|-------------|
-| Create deal | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Read deals | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Update deal | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Change deal stage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Reassign deal | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
-| Archive / Restore | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| View pipeline statistics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|-----------|-------|------|-----|---------|------|------|-------------|
+| Create deal | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Read deals | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (dept-scoped) |
+| Update deal | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Change deal stage | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Reassign deal | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Set Current Status | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| Archive / Restore | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| View pipeline statistics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### MoU Vault
 
-| Operation | Admin | TPO | EBSC | RBSC | HOD | Coordinator |
-|-----------|-------|-----|------|------|-----|-------------|
-| Create MoU | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Read MoUs | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Update MoU | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Change MoU status | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Soft delete / Restore | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Permanently delete | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
-| View MoU statistics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|-----------|-------|------|-----|---------|------|------|-------------|
+| Create MoU | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Read MoUs | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (dept-scoped) |
+| Update MoU | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Change MoU status | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Soft delete / Restore | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Permanently delete | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| View MoU statistics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (dept-scoped) |
+| Receive all department alerts | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ (own dept only) |
 
 ### Outreach
 
-| Operation | Admin | TPO | EBSC | RBSC | HOD | Coordinator |
-|-----------|-------|-----|------|------|-----|-------------|
-| Create outreach | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Read outreaches | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Update outreach | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Complete / Cancel | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Schedule follow-up | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| View outreach statistics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|-----------|-------|------|-----|---------|------|------|-------------|
+| Create outreach | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Read outreaches | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Update outreach | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Complete / Cancel | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Schedule follow-up | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| View outreach statistics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-### Alumni
+### Alumni Role Mapping
 
-| Operation | Admin | TPO | EBSC | RBSC | HOD | Coordinator |
-|-----------|-------|-----|------|------|-----|-------------|
-| Create alumni | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Read alumni | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Update alumni | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Assign company | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Update scores | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Permanently delete | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
-| View alumni statistics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|-----------|-------|------|-----|---------|------|------|-------------|
+| Create alumni | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Read alumni | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (dept-scoped) |
+| Update alumni | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Assign company | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Update scores | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Permanently delete | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| View alumni statistics | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (dept-scoped) |
 
 ### Employment
 
-| Operation | Admin | TPO | EBSC | RBSC | HOD | Coordinator |
-|-----------|-------|-----|------|------|-----|-------------|
-| Create / Read | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Update / Delete | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|-----------|-------|------|-----|---------|------|------|-------------|
+| Create / Read | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Update / Delete | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
-### Analytics & Enterprise
+### Placement Analytics
 
-| Module | Operation | Admin | TPO | EBSC | RBSC | HOD | Coordinator |
-|--------|-----------|-------|-----|------|------|-----|-------------|
-| Dashboard | View summary | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Institutional Dashboard | View full | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| TPO Sync | Ingest drive data | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
-| AI Email Gen | Generate emails | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ |
-| Activity Logs | View all | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Activity Logs | Create entries | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|-----------|-------|------|-----|---------|------|------|-------------|
+| View Selection Ratios | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (dept-scoped) |
+| View Placement Calendar | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Create/Edit drives | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ (own dept) |
+| View Peak Package | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Export reports | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
 
-### Notification Routing
+### Enterprise Features
+
+| Module | Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|--------|-----------|-------|------|-----|---------|------|------|-------------|
+| Dashboard | Institutional view | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| TPO Sync | Ingest drive data | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ |
+| AI Email | Generate via Gemini | ✗ | Review | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Web Scraping | Run / Review | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Web Scraping | View only | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Activity Logs | View all | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Activity Logs | Create entries | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Card Templates | Create/Edit | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ |
+| Card Templates | Use published | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Card Templates | Publish | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
+
+### Department Management
+
+| Operation | Admin | Head | TPO | Co-Head | EBSC | RBSC | Coordinator |
+|-----------|-------|------|-----|---------|------|------|-------------|
+| Create/Edit departments | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Assign user department | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+
+## Notification Routing
 
 | Notification Type | Recipients |
 |-----------------|------------|
-| MoU expiry alert (30 days before) | All users with `hod` or `tpo` role |
-| High-priority company inactivity (90 days) | All users with `hod` or `tpo` role |
-| Follow-up reminders | Deal owner + `hod` and `tpo` roles |
-| System alerts | All users with `admin` role |
+| MoU expiry alert (configurable days before) | Head + TPO (all depts); Coordinator (own dept only) |
+| High-priority deal inactivity (60 days) | Head + Deal owner |
+| Scraped leads available for review | Head + TPO |
+| Deal stage change | Deal owner + Co-Head (if different) |
+| System alerts | Admin |
+| Password reset OTP | Requesting user |
 
-## Department Scope
+## Department Scoping
 
-- **HOD** can view and manage resources scoped to their department (via `departmentId` on MoU and Alumni).
-- **Coordinator** can view and manage resources scoped to their department.
-- **Admin, TPO, EBSC, RBSC** have cross-department visibility.
+- **Coordinator** CRUD scope is limited to their assigned `department_id` for: MoUs, alumni, drives, deals.
+- **Head, TPO, Co-Head, EBSC, RBSC, Admin** have cross-department visibility.
+- Companies are NOT department-scoped (they are institutional resources).
+- Outreach and Activity Logs are NOT department-scoped (team-wide visibility).

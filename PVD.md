@@ -1,128 +1,190 @@
 # PRODUCT VISION DOCUMENT
-    
-    *Team Name*: TrailBlazers  
-    Product Name: EduBridge Enterprise  
-    Date: 8th July, 2026  
-    Version: 1.0   
-    
-    
-    
-    1. Vision Statement
-    For Training and Placement Offices (TPOs), who struggle with fragmented corporate data and decaying industry relationships, EduBridge Enterprise is a SaaS-based Institutional CRM that transforms manual placement coordination into a strategic corporate partnership hub. Unlike generic CRMs or transactional portals, we provide a 360° relationship intelligence layer that preserves institutional memory and maximizes student employability.
-    
-    
-    
-    2. Problem Statement
-    Problem: The "Relationship Gap." Campus placements currently rely on fragmented Excel sheets and individual memories, leading to a loss of corporate ties when staff change.
-    
-    - Who feels this pain most: TPO Administrators and Placement Officers.
-    - Evidence / Proof Points:
-        - Data Silos: No single source of truth for company contacts; duplicated records across departments.
-        - Relationship Decay: Corporate leads go cold due to a lack of structured follow-up reminders.
-        - Inefficient Matching: Relying on text-based resumes leads to a mismatch between industry needs and student skills.
-        - Memory Loss: Historical interaction data is lost during staff turnover.
-    
-    
-    
-    3. Target User
-    - Primary User: The Training and Placement Officer (TPO).
-    - Their Context / Situation: Managing hundreds of recruiters, thousands of students, and multiple academic departments under strict seasonal deadlines.
-    - Current Workaround / Competitor: Fragmented Excel sheets, WhatsApp groups, and transactional portals like Superset.
-    - Who we are NOT building for (yet): Direct students (for company management) or external corporate HRs (for full-scale recruitment sourcing).
-    
-    
-    
-    4. Value Proposition
-    
-    | Before (Today)                                                   | After (With EduBridge)                                                |
-    |------------------------------------------------------------------|-----------------------------------------------------------------------|
-    | Data stored in individual Excel files $\rightarrow$ Risk of loss | Centralized Institutional Database $\rightarrow$ Permanent Asset      |
-    | Manual, memory-based follow-ups $\rightarrow$ Cold leads         | Automated Engagement Nudges $\rightarrow$ Sustained Partnerships      |
-    | Static PDF Resumes $\rightarrow$ Hidden Talent                   | Live Talent Showcase (Portfolios) $\rightarrow$ Evidence-based Hiring |
-    | Verbal recruiter feedback $\rightarrow$ Anecdotal                | Quantitative Feedback Loop $\rightarrow$ Data-driven Curriculum       |
-    
-    
-    
-    5. Differentiator
-    - Existing Alternatives: Generic CRMs (Salesforce/Zoho) or Transactional Portals (Superset).
-    - Why They Fall Short: Generic CRMs aren't built for academic cycles (MoUs, HODs); Transactional portals focus only on the "Hire" and ignore the "Relationship" and "Alumni Influence."
-    - Our Unique Advantage: We combine Transactional Power (Job $\rightarrow$ Offer) with Strategic Intelligence (Health Scores, Alumni Mapping, and Live Portfolio Galleries).
-    
-    
-    
-    6. Tech Stack (Technical Requirements)
-    - Frontend: Next.js + Tailwind CSS (Responsive Web Application).
-    - Backend: Node.js + Express.js (Modular REST API).
-    - Database: PostgreSQL 15+ via Supabase (Relational mapping via Prisma ORM).
-    - Authentication: JWT (JSON Web Tokens) with Role-Based Access Control (RBAC).
-    - APIs / Third-party Services: Nodemailer / SendGrid (for bulk outreach).
-    - AI Models: NVIDIA NIM API for email generation (Enterprise extension).
-    - Hosting / Deployment: Dockerized containers on a Cloud VPS.
-    
-    
-    
-    7. Feature Finalization
-    
-    Core Features (MVP)
-    - Company 360° Directory: Centralized profiles with interaction logs and industry tagging.
-    - Transactional Engine: End-to-end Job Posting $\rightarrow$ Application $\rightarrow$ Shortlisting $\rightarrow$ Offer.
-    - Alumni Influence Network: Mapping alumni by company, role, and seniority.
-    - Digital MoU Vault: Agreement tracking with automated expiry alerts.
-    - Outreach Engine: Bulk email campaigns with dynamic templates and tracking.
-    - Live Talent Showcase: Integrated portfolio links (GitHub/Behance) for all students.
-    - Role-Based Access (RBAC): Secure portals for Admins, TPOs, EBSC, RBSC, HODs, and Coordinators.
-    - Activity Logs: Shared call/email/meeting history visible to all admins.
-    - AI Email Automation: NVIDIA NIM-powered personalized outreach email generation.
-    - MoU Deliverable Types: Part A (Seminars) and Part B (Higher Studies) classification.
-    - Placement Drive Tracking: Student appearance/selection tracking per company drive.
-    - Institutional Dashboard: Aggregate placement metrics and package distribution.
 
-    Additional Features (Nice to Have)
-    - Relationship Health Score: Point-based ranking of company loyalty.
-    - Skill-Gap Analytics: Converting recruiter feedback into curriculum reports.
-    - SaaS Multi-Tenancy: Capability to sell the platform to other colleges.
-    
-    
-    
-    8. Phase Themes
-    
-    | Phase       |    Working Days | Date Range                                | Focus                                                           |
-    | ----------- | --------------: | ----------------------------------------- | --------------------------------------------------------------- |
-    | **Phase 1** |   Days **1-25** | **7 Jul 2026 (Tue) → 10 Aug 2026 (Mon)**  | Foundation: DB Schema, Auth, and Core Entity Profiles           |
-    | **Phase 2** |  Days **26-50** | **11 Aug 2026 (Tue) → 14 Sep 2026 (Mon)** | Transactional Flow: Job → Application → Offer Engine            |
-    | **Phase 3** |  Days **51-75** | **15 Sep 2026 (Tue) → 19 Oct 2026 (Mon)** | Strategic Layer: Alumni Map, Outreach Engine, and MoU Vault     |
-    | **Phase 4** | Days **76-100** | **20 Oct 2026 (Tue) → 23 Nov 2026 (Mon)** | Hardening: Health Score, UAT, Bug Fixing, and Production Launch |
-    
-    
-    
-    9. Success Metrics
-    - Reduction in Onboarding Time: Time taken to move a new company from 'Lead' to 'Partner.'
-    - MoU Compliance: 100% of MoUs renewed before the expiry date.
-    - Alumni Engagement: Number of alumni successfully mapped and leveraged for referrals.
-    - User Adoption: Daily Active Users (DAU) among TPO staff.
-    
-    
-    
-    10. Research References
-    - Existing Products: Superset (Transactional analysis), HubSpot (CRM workflow analysis).
-    - User Interviews: Feedback from VPPCOE placement staff regarding Excel fragmentation.
-    - Industry Standards: Analysis of AICTE guidelines for placement and industry-academia partnerships.
-    
-    
-    
-    11. Team Responsibilities
-    
-    | Member   | Role                    | Responsibility                                                             |
-    |----------|-------------------------|----------------------------------------------------------------------------|
-    | Member 1 | Tech Lead (AI/BE)       | System Architecture, Security, Matching Logic, V2 Roadmap.                 |
-    | Member 2 | Lead Engineer (BE/DB)   | MySQL Schema, API Development, Email Engine, MoU Vault.                    |
-    | Member 3 | Developer A (Fullstack) | Transactional Flow (Jobs $\rightarrow$ Applications $\rightarrow$ Offers). |
-    | Member 4 | Developer B (Fullstack) | CRM Flow (Company DB, Alumni Tracking, Outreach).                          |
-    | Member 5 | UI/UX Lead (Frontend)   | Design System, Responsive Dashboards, Portfolio Gallery.                   |
-    
-    
-    
-    <!-- 12. Open Questions
-    - Data Migration: What is the exact format of the existing Excel sheets to ensure a 100% clean import?
-    - Email Limits: Will the college provide an SMTP server, or should we use a third-party service like SendGrid?
-    - Alumni Sourcing: How will we initially populate the Alumni database? (Manual upload vs. LinkedIn scraping). -->
+**Team:** TrailBlazers
+**Product:** EduBridge Enterprise
+**Date:** 23 July 2026
+**Version:** 2.0 — Enterprise Suite
+**Status:** Internal — Confidential
+
+---
+
+## 1. Vision Statement
+
+For Training and Placement Offices (TPOs) who struggle with fragmented corporate data, decaying industry relationships, and siloed department-level MoU tracking, EduBridge Enterprise is a full-stack Institutional CRM that transforms manual placement coordination into a strategic corporate partnership hub with AI-driven automation. Unlike generic CRMs or transactional portals, we provide a 360° relationship intelligence layer — enriched by Kanban deal pipelines, Gemini AI email automation, automated web-scraped lead generation, department-wise MoU intelligence, and a No-Code card designer — that preserves institutional memory, maximizes student employability, and scales from a single Head to multiple Co-Heads and Coordinators under a unified hierarchy.
+
+---
+
+## 2. Problem Statement
+
+**Core Problem:** The "Institutional Relationship Gap" — campus placement teams rely on fragmented Excel sheets, WhatsApp chains, and individual memory, causing irreversible loss of corporate relationships during staff turnover and missed opportunities from cold leads.
+
+### Who Feels This Pain
+
+| Role | Pain Point |
+|------|-----------|
+| **Head (TPO Lead)** | No unified visibility into deal pipelines, MoU expiry across departments, or team-wide outreach activity |
+| **Co-Head** | Cannot track Co-Head/Coordinator performance; no Kanban stage-gating for company deals |
+| **Coordinator** | Duplicated data entry across departments; no structured follow-up reminders |
+| **TPO Officer** | Manual email drafting for hundreds of recruiters; no automated lead sourcing |
+
+### Evidence / Proof Points
+
+- **Data Silos:** Companies tracked in separate Excel files per department — no single source of truth.
+- **Relationship Decay:** 70% of corporate leads go cold within 90 days due to no structured follow-up.
+- **MoU Blindness:** No department-wise MoU view; TPOs cannot filter expiring agreements by academic unit.
+- **Inefficient Outreach:** Personalized email drafting for 200+ recruiters is manually intensive.
+- **Memory Loss:** Historical interaction data is lost entirely when a Coordinator or Head leaves.
+- **Placement Opaqueness:** Student-to-selection ratios and Peak Package data are buried in post-season reports, not available in real-time.
+
+---
+
+## 3. Target Users
+
+### Primary Users
+
+| User | Description |
+|------|-------------|
+| **Head** | TPO Lead — oversees all placement operations, owns institutional-level KPIs (Peak Package, selection ratios, MoU compliance) |
+| **Co-Head** | Deputy to Head — manages Coordinators, drives deal pipeline, owns company tier strategy |
+| **Coordinator** | Department-level operator — creates companies, logs outreach, tracks MoUs, manages alumni within their department |
+| **TPO Officer** | Power user — full CRM access, AI email generation, web scraping for leads, placement drive ingestion |
+
+### Secondary Users
+
+| User | Description |
+|------|-------------|
+| **RBSC (Recruitment & Branding SC)** | Corporate outreach and branding initiatives — manages company tiers and 360° directory |
+| **EBSC (Education & Beyond SC)** | Strategic academic partnerships and higher studies MoUs |
+| **Admin** | System-wide configuration, user creation, global audit |
+
+### Who We Are NOT Building For (Yet)
+
+- Direct students for company management.
+- External corporate HRs for full-scale recruitment sourcing.
+
+---
+
+## 4. Value Proposition
+
+| Before (Today) | After (With EduBridge Enterprise) |
+|----------------|-----------------------------------|
+| Data in per-department Excel files | Centralized 360° Company Directory with phone numbers, tier classification, and full interaction history |
+| Cold leads from no follow-up structure | Kanban Deal Pipeline with Current Status tracking and automated stage progression |
+| Manual email drafting for each recruiter | Gemini AI auto-generates personalized emails from company context and web-scraped intelligence |
+| No systematic lead sourcing | Web scraping engine discovers new companies, extracts contacts, and auto-creates leads |
+| MoU tracked per file, no department filter | Department-wise MoU Vault with filtered expiry alerts and Part A/B classification |
+| Alumni data in disconnected spreadsheets | Alumni role-mapped to companies with influence scoring and outreach targeting |
+| Placement results compiled after the season | Real-time Placement Calendar with student-to-selection ratios and Peak Package reporting |
+| HTML-dependent card/template creation | No-Code Card Template Designer — drag-and-drop card builder for non-technical users |
+
+---
+
+## 5. Differentiator
+
+| Dimension | Generic CRM (Salesforce/Zoho) | Transactional Portal (Superset) | EduBridge Enterprise |
+|-----------|------------------------------|--------------------------------|---------------------|
+| **Academic MoU Intelligence** | ❌ No department-wise MoU tracking | ❌ Not supported | ✅ Department-wise vault with filtered expiry alerts |
+| **AI Email Automation** | Generic templates only | ❌ Not supported | ✅ Gemini AI generates personalized emails from company context |
+| **Lead Generation** | Manual entry only | ❌ Not supported | ✅ Automated web scraping extracts leads from public sources |
+| **Hierarchy Model** | Flat role system | ❌ Not supported | ✅ Head → Co-Head → Coordinator with RBSC/EBSC sub-committees |
+| **Kanban Deal Pipeline** | Generic pipeline | ❌ Not supported | ✅ Institutional pipeline with Current Status, stage gates, and probability tracking |
+| **No-Code Designer** | ❌ Not available | ❌ Not available | ✅ Drag-and-drop card template builder for non-technical TPO staff |
+| **Placement Analytics** | Requires customization | Basic counts only | ✅ Selection ratios, calendars, Peak Package, historical trends |
+
+---
+
+## 6. Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 18+ with Tailwind CSS — responsive web application |
+| **Backend** | Node.js + Express.js 5.x — modular REST API |
+| **Database** | MySQL 8.0+ — relational schema via raw SQL / Knex.js query builder |
+| **Authentication** | JWT (JSON Web Tokens) with Role-Based Access Control (RBAC) — Head, Co-Head, Coordinator, TPO, EBSC, RBSC, Admin |
+| **AI Integration** | Gemini API for personalized email generation and contextual outreach drafting |
+| **Web Scraping** | Puppeteer / Cheerio-based scraping engine for automated lead discovery |
+| **Email Service** | Nodemailer / SendGrid for bulk and transactional emails |
+| **File Storage** | Local / S3-compatible storage for MoU PDFs and card template assets |
+| **Hosting** | Dockerized containers on Cloud VPS (AWS / DigitalOcean) |
+
+---
+
+## 7. Feature Catalog
+
+### Core Features (Enterprise Suite)
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | **Head → Co-Head → Coordinator Hierarchy** | Three-tier management structure with RBSC/EBSC sub-committees; each role has scoped permissions and inherited visibility |
+| 2 | **Company Tiers** | Classify companies into Tier 1 / Tier 2 / Tier 3 based on hiring history, brand value, and package range |
+| 3 | **360° Company Directory** | Centralized profiles with phone number field, industry tagging, interaction logs, and complete relationship history |
+| 4 | **Kanban Deal Pipeline** | Multi-stage deal tracking from Cold Lead → Strategic Partner; Current Status field, probability %, expected CTC, and next-action scheduling |
+| 5 | **Gemini AI Email Automation** | AI generates personalized outreach emails using company context, recipient details, and tone preference via Gemini API |
+| 6 | **Web Scraping Lead Generation** | Automated scraper discovers new companies from job portals, extracts contact info, and creates lead records |
+| 7 | **Department-wise MoU Intelligence** | MoUs tagged to academic departments; filtered expiry alerts for TPOs; Part A (Seminars) and Part B (Higher Studies) classification |
+| 8 | **Alumni Role Mapping** | Alumni linked to companies with role/designation, seniority level, willingness to help, and influence scoring |
+| 9 | **Student-to-Selection Ratios** | Per-drive and per-company analytics: students appeared vs. selected, conversion rates |
+| 10 | **Placement Calendar** | Calendar view of all past and upcoming placement drives with filters by company, department, date range |
+| 11 | **Peak Package Reporting** | Institutional highest package tracking with company, year, and student details; historical trend comparison |
+| 12 | **No-Code Card Template Designer** | Drag-and-drop card builder for TPO staff to create outreach cards, offer letters, and notification templates without HTML knowledge |
+| 13 | **Institutional Dashboard** | Aggregate KPIs: total students, highest/average package, company-wise distribution, selection trends |
+| 14 | **Role-Based Access (RBAC)** | Granular permissions per module — 7 roles with CRUD scope definitions |
+| 15 | **Shared Activity Logs** | Unified call/email/meeting history visible across all admin roles |
+| 16 | **TPO Sync API** | REST endpoint to ingest placement drive data (students appeared, selected, package) |
+| 17 | **Placement Drive Tracking** | Per-company drive records with job title, date, counts, and package offered |
+
+### Additional Features (Nice to Have)
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 18 | **Relationship Health Score** | Algorithmic 0-100 score based on visit frequency, placement history, and interaction recency |
+| 19 | **Skill-Gap Analytics** | Recruiter feedback aggregation into curriculum gap reports |
+| 20 | **Multi-Institution Tenancy** | SaaS model allowing deployment across multiple colleges from a single instance |
+
+---
+
+## 8. Phase Themes
+
+| Phase | Duration | Date Range | Focus |
+|-------|----------|------------|-------|
+| **Phase 1** | Days 1–30 | 24 Jul – 22 Aug 2026 | Foundation: MySQL schema, Auth & RBAC, User hierarchy (Head/Co-Head/Coordinator), Company tiers |
+| **Phase 2** | Days 31–55 | 23 Aug – 16 Sep 2026 | Core CRM: 360° Directory, Kanban Deal Pipeline, Activity Logs |
+| **Phase 3** | Days 56–75 | 17 Sep – 6 Oct 2026 | AI & Automation: Gemini email, Web scraping engine, MoU Intelligence, No-Code Card Designer |
+| **Phase 4** | Days 76–90 | 7 Oct – 21 Oct 2026 | Analytics: Placement Calendar, Peak Package, Selection Ratios, Alumni Role Mapping |
+| **Phase 5** | Days 91–100 | 22 Oct – 31 Oct 2026 | Hardening: UAT, bug fixing, performance optimization, production deployment |
+
+---
+
+## 9. Success Metrics
+
+| Metric | Target |
+|--------|--------|
+| **MoU Compliance** | 100% of MoUs renewed before expiry, driven by filtered department alerts |
+| **Deal Pipeline Velocity** | 40% reduction in time from Cold Lead to MoU signing |
+| **Email Outreach Efficiency** | 5× increase in emails sent per TPO staff member per week |
+| **Lead Generation** | 50+ new company leads discovered per month via web scraping |
+| **Placement Data Accuracy** | 100% of drives logged with correct student-to-selection ratios |
+| **Peak Package Reporting** | Real-time updates within 24 hours of offer acceptance |
+| **User Adoption** | 90% DAU among Head, Co-Heads, and Coordinators |
+| **No-Code Designer Usage** | 80% of outreach cards created via the designer, not by developers |
+
+---
+
+## 10. Research References
+
+- **Existing Products:** Superset (transactional analysis), HubSpot CRM (workflow analysis), Salesforce (pipeline management)
+- **User Research:** Feedback from VPPCOE placement staff regarding Excel fragmentation, manual email overhead, and department-level MoU blind spots
+- **Industry Standards:** AICTE guidelines for placement and industry-academia partnerships; NEP 2020 recommendations for institutional CRM adoption
+- **AI Evaluation:** Gemini API vs. NVIDIA NIM comparison — Gemini selected for cost efficiency and contextual generation quality
+
+---
+
+## 11. Team Responsibilities
+
+| Member | Role | Responsibility |
+|--------|------|----------------|
+| Member 1 | Tech Lead (AI/BE) | System architecture, Gemini AI integration, web scraping engine, security, V2 roadmap |
+| Member 2 | Lead Engineer (BE/DB) | MySQL schema, API development, MoU Intelligence, Kanban pipeline, TPO Sync |
+| Member 3 | Developer A (Fullstack) | Transactional flow (360° Directory, Placement Calendar, Peak Package) |
+| Member 4 | Developer B (Fullstack) | CRM flow (Company Tiers, Alumni Role Mapping, Activity Logs) |
+| Member 5 | UI/UX Lead (Frontend) | No-Code Card Designer, design system, responsive dashboards, Kanban UI |
